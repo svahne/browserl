@@ -3035,7 +3035,7 @@ function run() {
     erl_exec(); 
   } catch(e) {
     document.write('Error while starting beam emu:'+e.toString());
-    throw 'error';
+    throw 'error:'+e.toString();
   }
 }
 
