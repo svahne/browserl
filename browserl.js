@@ -439,12 +439,11 @@ function loadBeam(file) {
   var currentModuleName = '';
   
   var i;
-  var gitbase = 'https://github.com/svahne/browserl/raw/master/beams/';
   
-  if (file == 'start.boot') bootFile = fetch(gitbase+file);  
-  else if (file=='beamfiles.tar') untar(fetch(gitbase+file));  
+  if (file == 'start.boot') bootFile = fetch("beams/"+file);  
+  else if (file=='beamfiles.tar') untar(fetch("beams/"+file));  
   else {
-    var a = fetch(gitbase+file+'.beam');
+    var a = fetch("beams/"+file+'.beam');
     checkBeam(a, 0, a.length);
   }
   for (i in loaderAtomTable) AtomTable[loaderAtomTable[i]-(2<<27)] = i;
