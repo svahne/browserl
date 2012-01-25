@@ -440,8 +440,8 @@ function loadBeam(file) {
   
   var i;
 
-  if (file == 'start.boot') bootFile = fetch(file);  
-  else if (file=='beamfiles.tar') untar(fetch(file));  
+  if (file == 'start.boot') bootFile = fetch('beams/'+file);  
+  else if (file=='beamfiles.tar') untar(fetch('beams/'+file));  
   else {
     var a = fetch('beam/'+file+'.beam');
     checkBeam(a, 0, a.length);
