@@ -28,6 +28,24 @@
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
   </style>
+  <script type="text/javascript" src="https://raw.github.com/svahne/browserl/master/term/term.js"></script>
+  <script type="text/javascript" src="https://raw.github.com/svahne/browserl/master/hapint/hapint.es"></script>
+  <script type="text/javascript" src="https://raw.github.com/svahne/browserl/master/zlib/zlib.js"></script>
+  <script type="text/javascript" src="https://raw.github.com/svahne/browserl/master/browserl.js"></script>
+	<style type="text/css">
+		.term
+		{
+			font-family: Courier New, Courier;
+			background-color: White;
+			color: black;
+			display:block;
+			float:left;
+			border: solid 1px #000000;
+			padding: 2px;
+			margin: 10px;
+		}
+        </style>
+
 </head>
 
 <body>
@@ -48,6 +66,16 @@
     <div class="description">
       An Erlang Emulator written in javascript
     </div>
+    <div id="terminal" class="term"></div>
+    <script type="text/javascript">
+      try { 
+        var term = new Terminal('terminal');
+        run(); 
+      } catch(e) {
+        document.write(e.toString()); 
+        throw "error";
+      }
+      </script>
 
     
 
@@ -65,12 +93,14 @@
 
     
       <h2>Authors</h2>
-      <p>Fredrik Svahn (fredrik.svahn@gmail.com)<br/>      </p>
+      <p>Fredrik Svahn (fredrik.svahn@gmail.com)
+<br/>      </p>
     
 
     
       <h2>Contact</h2>
-      <p>Fredrik Svahn (fredrik.svahn@gmail.com)<br/>      </p>
+      <p>Fredrik Svahn (fredrik.svahn@gmail.com)
+<br/>      </p>
     
 
     <h2>Download</h2>
