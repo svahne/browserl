@@ -67,6 +67,7 @@
       An Erlang Emulator written in javascript
     </div>
     <div id="terminal" class="term"></div>
+    <br clear="all">
     <script type="text/javascript">
       try { 
         var term = new Terminal('terminal');
@@ -81,8 +82,21 @@
 
     
       <h2>Dependencies</h2>
-      <p>No known dependencies</p>
-    
+      <p>Tested in Chromium 15 (fastest, loads to shell prompt in less 
+than a second 
+when hosted on same network), Firefox 7, Epiphany 3.2, Konqueror 4.7, 
+iPhone 4 and on an HTC Wildfire running Android 2.2 (slowest)</p>
+      <p>Only limited support for binaries and ets tables have been 
+added so far. Floats will not always work, especially not the 
+presentation in the shell due to a dependency on binaries.</p>
+      <p>Only the most commonly used bifs have been implemented. Files 
+and networking is not supported or expected to work, although some 
+initial hacks have been made in order to get the test server 
+running.</p>
+      
+      <p>Is able to start Common test and the test server, and passes 
+the standard OTP tests suites for lists, arrays, 
+dicts, random numbers and queues.</p>    
 
     
 
