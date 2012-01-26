@@ -1,5 +1,26 @@
 'use strict';
 
+// An erlang emulator written in javascript
+// Copyright (C) 2012, Fredrik Svahn
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//  An explicit clarification is that the author and copyright holder
+//  does not consider Erlang or beam code run under the emulator to
+//  be linked to the GPL:ed javascript code.
+
+
 //TODO list:
 //-----------
 //binaries, really a hack at the moment
