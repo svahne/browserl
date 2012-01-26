@@ -16,8 +16,8 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-//  An explicit clarification is that the author and copyright holder
-//  does not consider Erlang or beam code run under the emulator to
+//  An explicit clarification is that the author(s) and copyright holder(s)
+//  do not consider Erlang or beam code run under the emulator to
 //  be linked to the GPL:ed javascript code.
 
 
@@ -27,14 +27,12 @@
 //floats, mostly works, but uses binaries
 //ets tables, just a hack to get things working
 //file ops, just a hack
-//bignums and band bxor, etc
 //checking args for bifs
 
 //known BUGs
 //-----------
 //initial calls sometimes have proc_lib as initial call in i().
 //no Msgs in i() 
-//extra newlines when scrolling in term
 //lists:reverse(a) ==problem with binary matching in lib@3479
 //F=fun(X)->{ok,X} end, F(1). ==problem with binary matching?
 //ets:lookup_element hack ->  {error,{{save_suite_data,{ct_hooks,undefined,[]}},{ct_util_server,#Ref<0.0.0.2497>}}}

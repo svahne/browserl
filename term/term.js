@@ -103,14 +103,13 @@ Terminal.prototype.write_internal = function(input) {
       }
       this.row[this.y].data = "";
     } else {
-      var str = input.split("\n");
-      if (str.length == 1) this.row[this.y].data += str;
+      var inputrows = input.split("\n");
+      if (inputrows.length == 1) //no newline 
+	this.row[this.y].data += inputrows[0];
       else {
-	for (var j = 0; j < str.length; j++) {
-	  for (var i = 0; i < this.height-1; i++) {
-	    this.row[i].data = this.row[i+1].data;
-	  }
-	  this.row[this.y].data = str[j];
+	for (var j = 0; j < inputrows.length; j++) {
+	  this.write_internal(inputrows[j]);
+	  if (inputrows[j] == "") this.write_internal("\n");
 	}
       }
     }
