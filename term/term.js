@@ -39,9 +39,17 @@ function Terminal(term) {
     this.row[i].data = "";
   }
   var _this = this;
-  document.addEventListener("keypress", function(event) { _this.keypress(event); });
-  document.addEventListener("keydown", function(event) { _this.keydown(event); });
-  document.addEventListener("paste", function(event) { _this.paste(event); }, false);
+  if (document.addEventListener) {
+    document.addEventListener("keypress", 
+			      function(event) { _this.keypress(event); }, 
+			      false);
+    document.addEventListener("keydown", 
+			      function(event) { _this.keydown(event); }, 
+			      false);
+    document.addEventListener("paste", 
+			      function(event) { _this.paste(event); }, 
+			      false);
+  }
   this.e.onmouseover = this.e.focus;
 }
 
