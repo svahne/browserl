@@ -87,26 +87,29 @@
 
     
       <h2>Dependencies</h2>
-      <p>Tested in:
-      <li> Chrome 3-8, 11-16 (fastest, loads to shell prompt in 
+      <p>Known to boot in:
+      Chrome 3-8, 11-16 (fastest, loads to shell prompt in 
            less than a second when hosted on same network), 
-      <li> Firefox 3.0, 3.5, 3.6, 4, 5, 6, 7, 8
-      <li> Internet Explorer* 8, 9
-      <li> Safari 4.0, 5.0.5, 5.1 
-      <li> Opera 11, 11.5, 11.6 
-      <li> Epiphany 3.2
-      <li> Konqueror 4.7 
-      <li> iPhone 4*
-      <li> HTC Wildfire running Android 2.2*<br><br>
-      * The Erlang/OTPsystem will boot, but the terminal javascript will not 
-        accept user input
+      Firefox 3.0, 3.5, 3.6, 4, 5, 6, 7, 8,
+      Internet Explorer 8, 9,
+      Safari 4.0, 5.0.5, 5.1, 
+      Opera 11, 11.5, 11.6, 
+      Epiphany 3.2,
+      Konqueror 4.7, 
+      iPhone 4,
+      HTC Wildfire running Android 2.2.
+      Currently, the Erlang/OTP system will boot, but the terminal 
+      javascript will not accept user input in IE and the mobile 
+      browsers.
       </p>
 
 
       <p>Only limited support for binaries and ets tables have been 
 added so far. Floats will not always work, especially not the 
-presentation in the shell due to a dependency on binaries.</p>
-      <p>Only the most commonly used bifs have been implemented. Files 
+presentation in the shell due to a dependency on binaries. In the 
+example above math.beam is missing so no floats.</p>
+      <p>Only the most commonly used bifs have been implemented, and 
+arguments are not always checked. Files 
 and networking is not supported or expected to work, although some 
 initial hacks have been made in order to get the test server 
 running.</p>
