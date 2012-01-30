@@ -257,6 +257,12 @@ var am_sign_exclamation = loaderStrToAtom('!');
 var am_sign_plusplus = loaderStrToAtom('++');
 var am_sign_minusminus = loaderStrToAtom('--');
 
+if (!Date.now) {
+  Date.now = function() {
+    return +new Date;
+  }
+}
+
 //Common interface for extracting data from an Uint8Array, array or a string
 if (window.Uint8Array) {
   Uint8Array.prototype.getString = function(pos, len) {
@@ -479,7 +485,8 @@ function loadBeam(file) {
     } else if (hasArray && 'responseType' in xhr) {
       xhr.responseType = 'arraybuffer';
     } else {
-      xhr.overrideMimeType('text/plain; charset=x-user-defined');
+      if (xhr.overrideMimeType)
+	xhr.overrideMimeType('text/plain; charset=x-user-defined');
       hasArray=false;
     }
 
@@ -492,7 +499,9 @@ function loadBeam(file) {
       throw 'Error while loading ' + beamFile;
     }
     
-    if (!hasArray) return xhr.responseText;
+    if (!hasArray)
+      if (xhr.responseBody != undefined) return vbarrayToArr(xhr.responseBody);
+      else return xhr.responseText;
     
     if ('mozResponse' in xhr) {
       buffer = xhr.mozResponse;
@@ -504,6 +513,13 @@ function loadBeam(file) {
     return new Uint8Array(buffer, 0, buffer.byteLength);
   }
   
+  function vbarrayToArr(a) {
+    return vbarrayFirst(a).replace(/[\s\S]/g, function(str) {
+			    var c = str.charCodeAt(0);
+			    return String.fromCharCode(c&0xff, c>>8);
+			  }) + vbarrayLast(a);
+  }
+
   function untar(a) {
     var tarPos = 0, tarLen = a.length;
     while (tarPos <= tarLen) {
@@ -3037,10 +3053,10 @@ var run_queue = [], timer_queue = [], hproc = 0, ets_counter = 0, ets_tables = {
 var procs = [], reg_procs = {}, uniqueRef = 0;
 
 function run() {
-  var x = [], c_p, mod, ip;
+  var i, x = [], c_p, mod, ip;
 
   var start = Date.now();
-  beams.forEach(loadBeam);
+  for (i = 0; i < beams.length; i++) loadBeam(beams[i]);
   var elapsed = Date.now()-start;
   debugln1('load time: '+elapsed);
 

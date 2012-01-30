@@ -1,0 +1,7 @@
+Function vbarrayFirst(s)
+ vbarrayFirst = CStr(s)
+End Function
+Function vbarrayLast(s)
+ vbarrayLast = ""
+ if LenB(s) mod 2 Then vbarrayLast= Chr(AscB(RightB(s,1)))
+End Function
