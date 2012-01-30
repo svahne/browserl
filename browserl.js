@@ -534,10 +534,10 @@ function loadBeam(file) {
       if (fileName.length >= 100) throw 'No support for UStar extended filenames';
       if (fileName.length == 0) break;
       
-      var i, lenStr = '0'; //length in octal format
+      var i, lenStr = '0'; 
       for (i=0; i < 12; i++) 
 	lenStr += String.fromCharCode(a.getByte(tarPos+124+i));
-      var fileLen = parseInt(lenStr);
+      var fileLen = parseInt(lenStr, 8);
       
 //    var start = Date.now();
       if (fileName.match(/\.beam$/)) checkBeam(a, tarPos+512, fileLen);
