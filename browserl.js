@@ -34,7 +34,6 @@
 //initial calls sometimes have proc_lib as initial call in i().
 //no Msgs in i() 
 //lists:reverse(a) ==problem with binary matching in lib@3479
-//F=fun(X)->{ok,X} end, F(1). ==problem with binary matching?
 //ets:lookup_element hack ->  {error,{{save_suite_data,{ct_hooks,undefined,[]}},{ct_util_server,#Ref<0.0.0.2497>}}}
 
 
@@ -3293,19 +3292,18 @@ function erl_exec() {
 	      ip  = r.ip;
 	      var len = r.free.length;
 	      var ar = r.arity;
-	      if (ar > 0 && len > 0) throw 'What is the order of the args?';
-	      if (len > 0) {
-		for (j=0; j < len; j++) { 
-		  x[j+ar] = r.free[j];
-		}
-		r = x[0];
-	      } else if (ar > 0) {
+	      if (ar > 0) {
 		s1 = listToArray(x[1]);
 		for (j=0; j < ar; j++) { 
 		  x[j] = s1[j];
 		}
-		r = x[0];
 	      }
+	      if (len > 0) {
+		for (j=0; j < len; j++) { 
+		  x[j+ar] = r.free[j];
+		}
+	      }
+              if (ar + len > 0) r = x[0];
 	      continue new_mod;
 	    } 
 	    //apply({M, F}, A)
