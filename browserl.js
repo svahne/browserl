@@ -452,7 +452,7 @@ function arrayToTerm(a, loading){
 var bootFile;
 
 function loadBeam(file) {
-  var Code1 = [];
+  var Code1, Code2 = [];
   var localAtomToGlobal = [];
   var labelsToIp = [0];
   var Imports = [];
@@ -461,7 +461,8 @@ function loadBeam(file) {
   var Literals = [];
   var Strings = '';
   var currentModuleName = '';
-  
+  var hasTypedArray = ('ArrayBuffer' in window && 'Uint8Array' in window);
+    
   var i;
   
   if (file == 'start.boot') bootFile = fetch("beams/"+file);  
@@ -475,30 +476,26 @@ function loadBeam(file) {
 
   function fetch(file) {
     var arr, buffer, xhr = new XMLHttpRequest();
-    var hasArray = ('ArrayBuffer' in window && 'Uint8Array' in window);
     var o = {};
 
     xhr.open('GET', file, false);
-    if (hasArray && 'mozResponseType' in xhr) {
+    if (hasTypedArray && 'mozResponseType' in xhr) {
       xhr.mozResponseType = 'arraybuffer';
-    } else if (hasArray && 'responseType' in xhr) {
+    } else if (hasTypedArray && 'responseType' in xhr) {
       xhr.responseType = 'arraybuffer';
     } else {
       if (xhr.overrideMimeType)
 	xhr.overrideMimeType('text/plain; charset=x-user-defined');
-      hasArray=false;
+      hasTypedArray=false;
     }
 
-    var start = Date.now();
     xhr.send(null);
-    var elapsed = Date.now()-start;
-    debugln1('fetched file: '+elapsed);
 
     if (xhr.status != 200 && xhr.status != 0) {
       throw 'Error while loading ' + beamFile;
     }
     
-    if (!hasArray)
+    if (!hasTypedArray)
       if (xhr.responseBody != undefined) return vbarrayToArr(xhr.responseBody);
       else return xhr.responseText;
     
@@ -526,7 +523,7 @@ function loadBeam(file) {
       Exports = {};
       localAtomToGlobal = [0];
       Literals = [];
-      Code1 = [];
+      Code2 = [];
       Imports = [];
       Funs = [];
       var fileName = a.getZeroTerminatedString(tarPos, 100);
@@ -548,13 +545,8 @@ function loadBeam(file) {
 
   function checkBeam(a, p, len) {
     if (a.getString(p, 4) == 'FOR1' && a.getString(p+8, 4) == 'BEAM') {
-      try {
-	scanBeam(a, p+12, len-12); 
-	transformBeam(); 
-      } catch(e) {
-	debugln1('Error while loading:'+e.toString());
-	throw 'error';
-      }
+      scanBeam(a, p+12, len-12); 
+      transformBeam(); 
     } else { 
       throw 'Not a beam file';
     }
@@ -670,7 +662,7 @@ function loadBeam(file) {
     var ip = 0;
     var i, j;
     var op;
-    Code1 = new Array(size);
+    try { Code1 = new Uint32Array(size) } catch (e) { Code1 = new Array(size); }
 
     while (pos < codeEnd) {
       op = a.getByte(pos++);
@@ -687,7 +679,7 @@ function loadBeam(file) {
 	}
       }
     }
-    Code1.length = ip;
+    if (Code1 instanceof Array) Code1.length = ip;
     
     function decodeInt(b) {
       if ((b & 8) == 0) { 
@@ -706,7 +698,8 @@ function loadBeam(file) {
 	  var i, val = [], l = decodeInt(a.getByte(pos++)) + 9;
 	  for (i = pos; i<l+pos; i++) val.push(a.getByte(i));
 	  pos += l;
-	  return new Math.BigInt(val);
+	  Code2.push(new Math.BigInt(val));
+	  return (Code2.length-1) | (6 << 27);
 	} else { 
 	  var value = 0, bigval = [];
 	  var negative = a.getByte(pos)>127; 
@@ -716,10 +709,13 @@ function loadBeam(file) {
 	    value = value * 256 + a.getByte(pos++);
 	  }
 	  if (negative) { 
-	    value = value - Math.pow(256,len); 
+	    value = value - Math.pow(256,len);
+	    Code2.push(value);
+	    return (Code2.length-1) | (6 << 27);	  
 	  } 
 	  if (is_small(value)) return value;
-	  return new Math.BigInt(bigval);
+	  Code2.push(new Math.BigInt(bigval));
+	  return (Code2.length-1) | (6 << 27);	  
 	}
       }
     }
@@ -735,14 +731,19 @@ function loadBeam(file) {
 	switch(b >> 4) {
 	case 0: //float
 	  pos += 8;
-	  return {type:am_float, value:getFloat(a, pos-8)};
+	  Code2.push({type:am_float, value:getFloat(a, pos-8)});
+	  return (Code2.length-1) | (6 << 27);	  
+
 	case 1: //select list
 	  var list = [], len = decodeInt(a.getByte(pos++));
 	  while(len-- > 0) list.push(decodeArg()); 
-	  return (list);
+	  Code2.push(list);
+	  return (Code2.length-1) | (6 << 27);	  
+
 	case 2: //fr TODO: optimize
-	  return {type: 'fr', value: decodeInt(a.getByte(pos++))};
-	  break;
+	  Code2.push({type: 'fr', value: decodeInt(a.getByte(pos++))});
+	  return (Code2.length-1) | (6 << 27);	  
+
 	case 3: //allocation list, (words, float, literals) //TODO does not seem to be needed
 	  var len = decodeInt(a.getByte(pos++));
 	  var list = [];
@@ -750,9 +751,13 @@ function loadBeam(file) {
 	    list.push(decodeInt(a.getByte(pos++)));
 	    list.push(decodeInt(a.getByte(pos++)));
 	  }
-	  return {type:'alist', list:list};
+	  Code2.push({type:'alist', list:list});
+	  return (Code2.length-1) | (6 << 27);	
+	  
 	case 4: //literal
-	  return {type:'literal', value:decodeInt(a.getByte(pos++))};
+	  Code2.push({type:'literal', value:decodeInt(a.getByte(pos++))});
+	  return (Code2.length-1) | (6 << 27);	  
+
 	default: 
 	  throw 'Unknown extended type '+(b >> 4);
 	}
@@ -785,23 +790,27 @@ function loadBeam(file) {
       Imports[j][1] = localAtomToGlobal[Imports[j][1]]+(2<<27);
     }
 
-    for (ip = 0; ip < Code1.length;) {
-      op_ip = ip;
-      op = Code1[ip++];
-      for (j = 0; j < ArityTable[op]; j++, ip++) {
-	var arg = Code1[ip];
-	
-	if (arg.type == 'literal') Code1[ip] = Literals[arg.value];
-	
-	if (arg instanceof Array) { //jump list in select_*
+    for (ip = 0; ip < Code2.length;ip++) {
+      var arg = Code2[ip];
+      
+      if (arg.type == 'literal') Code2[ip] = Literals[arg.value];
+
+      if (arg instanceof Array) { //jump list in select_*
 	  for (k = 0; k < arg.length; k++) {
 	    if ((arg[k] >> 27) == 5) 
 	      arg[k] = labelsToIp[(arg[k]<<5)>>5]; 
 	    if ((arg[k] >> 27) == 2) 
 	      arg[k] = (2<<27) + localAtomToGlobal[(arg[k]<<5)>>5];
 	  }
-	} else {
-	  switch(arg >> 27) {
+      }      
+    }
+    
+    for (ip = 0; ip < Code1.length;) {
+      op_ip = ip;
+      op = Code1[ip++];
+      for (j = 0; j < ArityTable[op]; j++, ip++) {
+	var arg = Code1[ip];
+	switch(arg >> 27) {
 	  case 2: // Atoms in code must be renumbered to global atom table
 	    Code1[ip] = (2<<27)+localAtomToGlobal[(arg<<5)>>5];
 	    break;
@@ -811,7 +820,6 @@ function loadBeam(file) {
 	  case 5: // Jump labels must be replaced by ref to instruction
 	    Code1[ip] = labelsToIp[arg << 5 >> 5];
 	    break;
-	  }
 	}
       }
       
@@ -849,7 +857,7 @@ function loadBeam(file) {
 	var mod = Imports[operation][0];
 	if (mod == am_erlang) {
 	  var fun = Imports[operation][1];
-	  switch(fun) {
+/*	  switch(fun) {
 	  case am_sign_minus:    operation = bif_minus2; break;
 	  case am_sign_plus:    operation = bif_plus2; break;
 	  case am_sign_multiply:    operation = bif_multiply2; break;
@@ -864,10 +872,12 @@ function loadBeam(file) {
 
 	  default:
 	    throw 'Unknown arith op '+pp(fun)+' in gc_bif2';
-	  }
-	  Code1[ip - arity + 2] = operation;
+	  }*/
+	  Code1[ip - arity + 2] = fun;
 	}
       }
+
+
       //Check for unsupported ops
       /*
       switch (op){
@@ -913,7 +923,8 @@ function loadBeam(file) {
                                              type: 'module',
 					     number: Modules.length, 
 					     value: currentModuleName,
-					     code: Code1, 
+					     code: Code1,
+					     literals: Code2,
 					     exports: globalExports,
 					     imports: Imports,
 					     funs: Funs,
@@ -1067,29 +1078,40 @@ function bif_multiply2(c_p, s1, s2) {
 }
 
 function bif_plus2(c_p, s1, s2) {
+  if (typeof s1 == typeof s2 && typeof s1 == 'number') {
+    s1 = s1+s2;
+    if (is_small(s1)) return s1;
+    return new Math.BigInt.valueOf(s1);
+  }
   if (is_float(s1)) s1=s1.value;
   if (is_float(s2)) s2=s2.value;
   if (is_bignum(s1)) 
     if (is_bignum(s2)) return s1.add(s2);
     else return s1.add(Math.BigInt.valueOf(s2))
   if (is_bignum(s2)) return s2.add(Math.BigInt.valueOf(s1));
-  
+
+  if (typeof s1 != 'number') return badarg(c_p, s1);
+  if (typeof s2 != 'number') return badarg(c_p, s2);
   s1 = s1+s2;
-  if (!(s1>0) && !(s1<=0)) throw 'NaN'
   if (is_small(s1)) return s1;
   return new Math.BigInt.valueOf(s1);
 }
 
 function bif_minus2(c_p, s1, s2) {
+  if (typeof s1 == typeof s2 && typeof s1 == 'number') {
+    s1 = s1-s2;
+    if (is_small(s1)) return s1;
+    return new Math.BigInt.valueOf(s1);
+  }
   if (is_float(s1)) s1=s1.value;
   if (is_float(s2)) s2=s2.value;
   if (is_bignum(s1)) 
     if (is_bignum(s2)) return s1.subtract(s2);
     else return s1.subtract(Math.BigInt.valueOf(s2))
   if (is_bignum(s2)) return s2.subtract(Math.BigInt.valueOf(s1));
-
+  if (typeof s1 != 'number') return badarg(c_p, s1);
+  if (typeof s2 != 'number') return badarg(c_p, s2);
   s1 = s1-s2;
-  if (!(s1>0) && !(s1<=0)) throw 'NaN'
   if (is_small(s1)) return s1;
   return new Math.BigInt.valueOf(s1);
 }
@@ -1463,7 +1485,21 @@ function bif1(c_p, mfa, arg1) {
   }
 }
 
-
+function gc_bif2(c_p, fun, arg1, arg2) {
+  switch(fun) {
+    case am_sign_minus:     return bif_minus2(c_p, arg1, arg2);
+    case am_sign_plus:      return bif_plus2(c_p, arg1, arg2)
+    case am_sign_multiply:  return bif_multiply2(c_p, arg1, arg2);
+    case am_sign_divide:    return bif_divide2(c_p, arg1, arg2);
+    case am_rem:            return bif_rem2(c_p, arg1, arg2);
+    case am_div:            return bif_div2(c_p, arg1, arg2);
+    case am_band:           return bif_band2(c_p, arg1, arg2);
+    case am_bsr:            return bif_bsr2(c_p, arg1, arg2);
+    case am_bsl:            return bif_bsl2(c_p, arg1, arg2);
+    case am_bor:            return bif_bor2(c_p, arg1, arg2);
+    case am_bxor:           return bif_bxor2(c_p, arg1, arg2);
+  }
+}
 
 //bif2 - Can fail
 function bif2(c_p, mfa, arg1, arg2) {
@@ -2085,8 +2121,9 @@ function bif(c_p, m, f, a, x) {
 
 	case am_phash: 
 	  if (a!=2) break;
-	  //HACK Not really a good hash function...
-	  return 7;
+	  var res = 0, str = x[0].toString();
+	  for (var j = 0; j<str.length; j++) res += str.charCodeAt(j); 
+	  return (res % x[1])+1;
 
 	case am_make_ref:
 	  if (a!=0) break;
@@ -2785,6 +2822,81 @@ function erlangExit(c_p, target, reason) {
   run_queue.push(procs[target.value]);
 }
 
+function erlangApply(c_p, code, ip, r, x, mod, fun, ar) {
+
+          if (code[ip]==102) { //This goes via erlang.beam
+	    //apply(Fun, A) r=Fun, x1=A
+            if (r.type == 'fun') {
+	      mod = r.mod; 
+	      ip  = r.ip;
+	      var len = r.free.length;
+	      ar = r.arity;
+	      if (ar > 0) {
+		var s1 = listToArray(x[1]);
+		for (var j=0; j < ar; j++) { 
+		  x[j] = s1[j];
+		}
+	      }
+	      if (len > 0) {
+		for (var j=0; j < len; j++) { 
+		  x[j+ar] = r.free[j];
+		}
+	      }
+              if (ar + len > 0) r = x[0];
+	      return [c_p, r, mod, fun, ar, ip];
+	    } 
+	    //apply({M, F}, A)
+	    x[2] = x[1]; //A
+	    x[1] = r[1]; //F
+	    r = r[0]; //M
+	    mod = r;
+	    fun = x[1];
+            ar = listLen(x[2]);
+	    if (ar == undefined) return badarg_stacktrace(c_p, x[2]);
+	    if (ar > 0) {
+	      var tmp = listToArray(x[2]);
+	      for (j=0; j < ar; j++) {
+		x[j] = tmp[j];
+	      }
+	      r = x[0];
+	    }
+	    return [c_p, r, mod, fun, ar, ip];
+	  } else if (code[ip]==103) { //This goes via erlang.beam
+	    //apply(M, F, A), r=M,x1=F x2=A or
+	    //{M, F}(A), r=M, x1=F, x2=A
+  	    mod = r; 
+  	    fun = x[1];
+	    ar = listLen(x[2]);
+	    if (ar == undefined) return badarg_stacktrace(c_p, x[2]);
+	    if (ar > 0) {
+	      var tmp = listToArray(x[2]);
+	      for (j=0; j < ar; j++) {
+		x[j] = tmp[j];
+	      }
+	      r = x[0];
+	    }
+	    return [c_p, r, mod, fun, ar, ip];
+	  } else {
+	    //M:F(A) or
+	    //{M, ...}:F(A), r={M, ...}, x1=F
+	    //{lists,y,z}:reverse(b). == lists:reverse(b,{lists,y,z})
+	    //{lists,y,z}:reverse(). == lists:reverse({lists,y,z})
+            var t = code[ip];
+	    x[0]=r;
+	    if ( is_tuple(x[t])) { //{M, ...}:F(A)
+	      mod = x[t][0];
+	      fun = x[t+1];
+	      ar = t+1;
+	      return [c_p, r, mod, fun, ar, ip];
+	    }
+
+	    mod = x[t];
+	    fun = x[t+1];
+	    ar = t; 
+	    return [c_p, r, mod, fun, ar, ip];
+	  }
+}
+
 function whereis(pid) {
   var res = reg_procs[pid];
   return ((res == undefined) ? strToAtom('undefined') : res);
@@ -3017,6 +3129,7 @@ function functionToIp(mod, fun, ar) {
   return -1;
 }
 
+var start1=0;
 
 function erl_idle() {
   if (timer_queue.length > 0) {
@@ -3031,6 +3144,7 @@ function erl_idle() {
   }
   if (run_queue.length > 0) erl_exec();
   else setTimeout(erl_idle, 100);
+
 }
 
 function term_callback(port, str){
@@ -3066,6 +3180,8 @@ function run() {
 
   run_queue.push(c_p);
   try { 
+    start1 = Date.now();
+    
     erl_exec(); 
   } catch(e) {
     document.write('Error while starting beam emu:'+e.toString());
@@ -3074,7 +3190,7 @@ function run() {
 }
 
 var debug = false, debug_pid = -1;
-
+var ops= 0;
 /*** MAIN LOOP ***/
 
 function erl_exec() {
@@ -3088,6 +3204,7 @@ function erl_exec() {
       case 3: return x[arg<<5>>5];
       case 4: return y[y.length-1-(arg<<5>>5)];
       case 5: return r;
+      case 6: return mod.literals[arg<<5>>5]
       default: return arg;
     }
   }
@@ -3103,7 +3220,7 @@ function erl_exec() {
     }
   }
 
-  new_proc: for(;;) {
+  new_proc: while(true) {
     c_p = run_queue.shift();
     if (c_p == undefined) {
       setTimeout(erl_idle, 10);
@@ -3119,26 +3236,18 @@ function erl_exec() {
     y = c_p.y;
     r = c_p.r;
     ip = c_p.ip;
-    mod = c_p.mod;   //atom if extcall otherwise module object
+    mod = c_p.mod;   //may be atom or object
     fun = c_p.fun;   //only valid if extcall
     ar  = c_p.ar;    //only valid if extcall
     name = c_p.name;
     reds = 10000; //BUG if 10 and  erlang:process_info(self()).
 
-  new_mod: for(;;) {
-    if (reds == 0) {
-      c_p.x = x;
-      c_p.y = y;
-      c_p.r = r;
-      c_p.ip = ip;
-      c_p.mod = mod;
-      c_p.fun = fun;
-      c_p.ar = ar;
-      if (c_p.state == 'runnable') run_queue.push(c_p);
-      continue new_proc;
-    }
-    
-    if (typeof mod == 'number') { //An atom means that this is an extcall
+  new_mod: while(true) {
+    // We are here because:
+    // 1. We are doing an external call, in this case mod is an atom and not an object
+    // 2. We have run of reductions
+    // 3. We have a fault
+    if (typeof mod == 'number') { 
       var orig_mod = mod;
       mod = atomToModule(mod);
       if (mod == undefined) { 
@@ -3149,7 +3258,7 @@ function erl_exec() {
 	r = strToAtom('undef'); 
 	debugln1('*** WARNING: undefined module: '+pp(orig_mod))
       } else {
-	
+
 ///*
 	if (debug || name == debug_pid){
 	  debugln1()
@@ -3159,7 +3268,6 @@ function erl_exec() {
 //*/	
 
         var exported_arities = mod.exports[fun];
-
         if (exported_arities == undefined || exported_arities[ar] == undefined) {
 	  x[0] = r;
 	  r = bif(c_p, mod, fun, ar, x);
@@ -3171,54 +3279,72 @@ function erl_exec() {
       }
     } 
     
-    if (!c_p.fault) {
-	code = mod.code;
-	imports = mod.imports;
-	strings = mod.string;
+    if (c_p.fault) {
+      if (c_p.catches.length > 0) {
+	var c = c_p.catches.pop();
+	ip = c.ip;
+	mod = c.mod;
+	//	    debugln1('*** '+pp(c_p.fault_class)+':'+pp(r)+
+	//	             ' in pid '+c_p.name+', caught by '+mod.name+'@'+ip);
+	y.length = c.y;
+	c_p.cp.length = c.cp_len;
+	if (c_p.fault_class != strToAtom('throw'))
+	  if (c_p.stacktrace)
+	    r = [strToAtom('EXIT'), [r, c_p.stacktrace]];
+	  else
+	    r = [strToAtom('EXIT'), r];
+	  c_p.fault = false;
+	continue new_mod;
+      } else {
+	//	    debugln1('*** Fault '+pp(c_p.fault_class)+' r = '+pp(r));
+	//	    debugln1('*** Process '+c_p.name+' died with reason '+pp(r));
+	for (j=0; j < c_p.monitoring_me.length; j++) 
+	  erlangSend(c_p.monitoring_me[j].pid, 
+		     [strToAtom('DOWN'), c_p.monitoring_me[j].ref, 
+		     strToAtom('process'), 
+		     {type:am_pid, value:c_p.name}, r],[]);
+	  for (j=0; j < c_p.links.length; j++) 
+	    if (r == strToAtom('kill'))
+	      erlangExit(c_p, c_p.links[j], r);
+	    else if (procs[c_p.links[j].value] != undefined &&
+	      procs[c_p.links[j].value].trap_exit != am_true)
+	      erlangExit(c_p, c_p.links[j], r);
+	    else erlangSend(c_p.links[j], 
+	      [strToAtom('EXIT'), 
+			    {type:am_pid, value:c_p.name}, r],[]);
+	    delete procs[c_p.name];
+	  //TODO more cleanup, reg_procs, monitors, links, ets tables, etc
+	    continue new_proc;
+      }
+    } 
+
+    if (reds == 0) {
+      c_p.x = x;
+      c_p.y = y;
+      c_p.r = r;
+      c_p.ip = ip;
+      c_p.mod = mod;
+      c_p.fun = fun;
+      c_p.ar = ar;
+      if (c_p.state == 'runnable') run_queue.push(c_p);
+      continue new_proc;
     }
 
-    next: for(;reds > 0;) {
+    code = mod.code;
+    imports = mod.imports;
+    strings = mod.string;
 
-      if (c_p.fault) {
-	  if (c_p.catches.length > 0) {
-	    var c = c_p.catches.pop();
-	    ip = c.ip;
-	    mod = c.mod;
-//	    debugln1('*** '+pp(c_p.fault_class)+':'+pp(r)+
-//	             ' in pid '+c_p.name+', caught by '+mod.name+'@'+ip);
-	    y.length = c.y;
-	    c_p.cp.length = c.cp_len;
-	    if (c_p.fault_class != strToAtom('throw'))
-	      if (c_p.stacktrace)
-		r = [strToAtom('EXIT'), [r, c_p.stacktrace]];
-	      else
-		r = [strToAtom('EXIT'), r];
-            c_p.fault = false;
-	    continue new_mod;
-	  } else {
-//	    debugln1('*** Fault '+pp(c_p.fault_class)+' r = '+pp(r));
-//	    debugln1('*** Process '+c_p.name+' died with reason '+pp(r));
-            for (j=0; j < c_p.monitoring_me.length; j++) 
-	      erlangSend(c_p.monitoring_me[j].pid, 
-			 [strToAtom('DOWN'), c_p.monitoring_me[j].ref, 
-			  strToAtom('process'), 
-			  {type:am_pid, value:c_p.name}, r],[]);
-	    for (j=0; j < c_p.links.length; j++) 
-	      if (r == strToAtom('kill'))
-		erlangExit(c_p, c_p.links[j], r);
-	      else if (procs[c_p.links[j].value] != undefined &&
-		  procs[c_p.links[j].value].trap_exit != am_true)
-		erlangExit(c_p, c_p.links[j], r);
-	      else erlangSend(c_p.links[j], 
-			      [strToAtom('EXIT'), 
-			      {type:am_pid, value:c_p.name}, r],[]);
-	    delete procs[c_p.name];
-	    //TODO more cleanup, reg_procs, monitors, links, ets tables, etc
-	    continue new_proc;
-	  }
+    while(reds) {
+/*        ip = 13; //For performance testing
+	if (ops++ % 10000000 == 0) { 
+	  var elapsed = Date.now()-start1;
+	  debugln1('Mops/s: '+((ops/elapsed)/1000));
+	  start1 = Date.now();
+	  ops = 1;
 	}
+*/
+	op = code[ip++];
 
-	op = code[ip++];      
 
 /*
  	if (debug || name == debug_pid){
@@ -3227,8 +3353,7 @@ function erl_exec() {
           debugln1(';;;'+pp(r)+'---'+ppx(x)+' --- '+ppy(y));
 	}
 //*/
-        x[0]=r; //BUG: x[0] should be unused in this scope
-	  
+	
 	switch(op) {
 	  
 	case 4: // call/2 (Ar) F
@@ -3237,31 +3362,31 @@ function erl_exec() {
 	case 6:   // call_only/2 (Ar) Func 
 	  ip = code[ip + 1];
 	  reds--;
-///*	  
+/*	  
           if(debug || name == debug_pid) {
 	    debugln1('');
 	    debugln1(name+':call '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
 	    ':'+pp(code[ip-2])+'/'+pp(code[ip-1])+') r:'+pp(r)+' x:'+ppx(x));      
 	  }
 //*/
-          continue next;
+          continue;
 
 	case 61: // jump/1
 	  ip = code[ip];
-	  continue next;
+	  continue;
 	  
 	case 5:   // call_last/3: (Ar) Func D  
 	  y.length -= code[ip + 2];
 	  ip = code[ip + 1];
 	  reds--;
-///*	  
+/*	  
 	  if (debug || name == debug_pid) {
 	    debugln1(''); 
 	    debugln1(name+':call last '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
 	    ':'+pp(code[ip-2])+'/'+pp(code[ip-1])+') r:'+pp(r)+' x:'+ppx(x));
 	  }
 //*/
-	  continue next;
+	  continue;
 
 	case 7:   // call_ext/2: (Ar) Func 
 	  c_p.cp.push(mod, ip + 2);                 //next opcode
@@ -3279,84 +3404,20 @@ function erl_exec() {
 	  ar  = imports[code[ip + 1]][2];
 	  continue new_mod;
 
-	  //TODO optimize and break out as own function
 	case 113: // apply_last/2 Ar D
 	  y.length -= code[ip + 1];
 	  // !!!! fall through !!!! 
 	case 112: // apply/1 Ar
 	  if (op==112) c_p.cp.push(mod, ip + 1);      //next opcode
-          if (code[ip]==102) { //This goes via erlang.beam
-	    //apply(Fun, A) r=Fun, x1=A
-            if (r.type == 'fun') {
-	      mod = r.mod; 
-	      ip  = r.ip;
-	      var len = r.free.length;
-	      var ar = r.arity;
-	      if (ar > 0) {
-		s1 = listToArray(x[1]);
-		for (j=0; j < ar; j++) { 
-		  x[j] = s1[j];
-		}
-	      }
-	      if (len > 0) {
-		for (j=0; j < len; j++) { 
-		  x[j+ar] = r.free[j];
-		}
-	      }
-              if (ar + len > 0) r = x[0];
-	      continue new_mod;
-	    } 
-	    //apply({M, F}, A)
-	    x[2] = x[1]; //A
-	    x[1] = r[1]; //F
-	    r = r[0]; //M
-	    mod = r;
-	    fun = x[1];
-            ar = listLen(x[2]);
-	    if (ar == undefined) badarg_stacktrace(c_p, x[2]);
-	    if (ar > 0) {
-	      var tmp = listToArray(x[2]);
-	      for (j=0; j < ar; j++) {
-		x[j] = tmp[j];
-	      }
-	      r = x[0];
-	    }
-	    continue new_mod;
-	  } else if (code[ip]==103) { //This goes via erlang.beam
-	    //apply(M, F, A), r=M,x1=F x2=A or
-	    //{M, F}(A), r=M, x1=F, x2=A
-  	    mod = r; 
-  	    fun = x[1];
-	    ar = listLen(x[2]);
-	    if (ar == undefined) badarg_stacktrace(c_p, x[2]);
-	    if (ar > 0) {
-	      var tmp = listToArray(x[2]);
-	      for (j=0; j < ar; j++) {
-		x[j] = tmp[j];
-	      }
-	      r = x[0];
-	    }
-	    continue new_mod;
-	  } else {
-	    //M:F(A) or
-	    //{M, ...}:F(A), r={M, ...}, x1=F
-	    //{lists,y,z}:reverse(b). == lists:reverse(b,{lists,y,z})
-	    //{lists,y,z}:reverse(). == lists:reverse({lists,y,z})
-            var t = code[ip];
-	    x[0]=r;
-	    if ( is_tuple(x[t])) { //{M, ...}:F(A)
-	      mod = x[t][0];
-	      fun = x[t+1];
-	      ar = t+1;
-//  	      debugln1('old_apply:'+pp(mod)+':'+pp(fun)+'/'+t+'..'+ppx(x));
-	      continue new_mod;
-	    }
-
-	    mod = x[t];
-	    fun = x[t+1];
-	    ar = t; 
-	    continue new_mod;
-	  }
+          var res = erlangApply(c_p, code, ip, r, x, mod, fun, ar);
+	  //[c_p, r, mod, fun, ar, ip]
+	  c_p = res[0];
+	  r = res[1];
+	  mod = res[2];
+	  fun = res[3];
+	  ar = res[4];
+	  ip = res[5];
+	  continue new_mod;
 
 	  case 18: // deallocate/1 D
 	  y.length -= code[ip];
@@ -3408,7 +3469,7 @@ function erl_exec() {
 	  strings = mod.string;
 	  if (debug || name == debug_pid ) 
 	    debugln1('return to '+ipToFunction(mod, ip)+' r='+pp(r));
-	  continue next;
+	  continue;
 
 	case 70: // put_tuple/2 Ar Dst=r
 	  tp = [];
@@ -3421,45 +3482,45 @@ function erl_exec() {
 	    ip += 2;
 	  }
 	  s(code[s1], tp); 
-	  continue next;
+	  continue;
 
 	case 39: //is_lt/3 Fail S1 S2  
           if (lt(g(code[ip+1]), g(code[ip+2]))) break;
           ip = code[ip];
-          continue next;
+          continue;
 
 	case 40: //is_ge/3 Fail S1 S2 
           if (ge(g(code[ip+1]), g(code[ip+2]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 41: //is_eq Fail S1 S2
            s1 = g(code[ip+1]);
 	   s2 = g(code[ip+2]);
 	   if (eq(s1, s2)) break;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 	case 42: //is_ne Fail S1 S2
            s1 = g(code[ip+1]);
 	   s2 = g(code[ip+2]);
 	   if (!eq(s1, s2)) break;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 	case 43: //is_eq_exact Fail S1 S2
            s1 = g(code[ip+1]);
 	   s2 = g(code[ip+2]);
 	   if (eq_exact(s1, s2)) break;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 	case 44: //is_ne_exact Fail S1 S2
            s1 = g(code[ip+1]);
 	   s2 = g(code[ip+2]);
 	   if (!eq_exact(s1, s2)) break;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 
 	case 124: //gc_bif1/5: Fail (Live) Operation S1 Dst
@@ -3467,14 +3528,14 @@ function erl_exec() {
 	   if (!c_p.fault) break;
 	   c_p.fault = false;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 	case 125: //gc_bif2/6: Fail xx Op Arg1 Arg2 Dst
-           s(code[ip+5], (code[ip+2])(c_p, g(code[ip+3]), g(code[ip+4])));
+           s(code[ip+5], gc_bif2(c_p, code[ip+2], g(code[ip+3]), g(code[ip+4])));
 	   if (!c_p.fault) break;
 	   c_p.fault = false;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 	case 64: // move/2 Src Dst
            s(code[ip+1], g(code[ip]));
@@ -3494,85 +3555,85 @@ function erl_exec() {
 	case 50: // is_reference/2 Fail Ref
 	  if (is_reference(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 49: // is_pid/2 Fail Pid=x
 	  if (is_pid(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 77: // is_function/2 Fail Fun=r
 	  if (is_fun(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 115: // is_function2/3 Fail Fun=x Ar?
           s1 = g(code[ip+1]);
 	  if (is_fun(s1) && s1.arity == (code[ip+2]<<5>>5)) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 	  
 	case 51: // is_port/2
 	  if (is_port(g(code[ip + 1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 57: // is_tuple/2 Fail Tuple
 	  if (is_tuple(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 45: // is_integer/2 Fail Int=x
           if (is_integer(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 46: // is_float/2 Fail S1=r
 	  if (is_float(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 47: // is_number/2 Fail Number=r
 	  if (is_number(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 48: // is_atom/2 Fail Atom=r
           if (is_atom(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 52: // is_nil/2 Fail List=r
 	  if (g(code[ip+1]) == (2 << 27)) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 53: // is_binary/2 Fail Bin=x 
 	  if (is_binary(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 
 	case 114: // is_boolean/2 Fail Number
 	  if (is_boolean(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 56: // is_nonempty_list/2 Fail List=x
 	  if (is_nonempty_list(g(code[ip+1]))) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 55: // is_list/2 Fail List=x
           s1 = g(code[ip+1]);
 	  if (is_list(s1)) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 58: // test_arity/3 Fail Tup=x Arity
 	  if ( g(code[ip+1]).length == code[ip+2]) break;
 	  ip = code[ip]; 
-	  continue next;
+	  continue;
 
 	case 66: // get_tuple_element/3 Tuple=x Pos Dst=x
 	  s(code[ip + 2], g(code[ip])[code[ip + 1]]);
@@ -3585,29 +3646,29 @@ function erl_exec() {
 	case 60: // select_tuple_arity/3 Tuple=x Fail SelectList
 	   s1 = g(code[ip++]); 
 	   s2 = code[ip++];
-	   s3 = code[ip++];
+	   s3 = g(code[ip++]);
 	   ip = s2;
 	   for (j = 0; j < s3.length; j+=2) {
 	     if (s3[j] == s1.length) { ip = s3[j+1]; break; }
 	   }
-	   continue next;
+	   continue;
 
 	case 59: // select_val/3 SelectVal=x Fail SelectList
 	  s1 = g(code[ip++]); 
 	  s2 = code[ip++];
-	  s3 = code[ip++];
+	  s3 = g(code[ip++]);
 	  ip = s2;
 	  for (j = 0; j < s3.length; j+=2) {
 	    if (eq(s3[j], s1)) { ip = s3[j+1]; break; }
 	  }
-	  continue next;
+	  continue;
 
 	  // Funs
 	case 103: // make_fun2/1 Fun 
           var numFree = mod.funs[code[ip]][1];
 	  var ar = mod.funs[code[ip]][2];
-	  var free = [];
-	  for (j = 0; j < numFree; j++) free.push(x[j])
+	  var free = (numFree == 0) ? [] : [r];
+	  for (j = 1; j < numFree; j++) free.push(x[j])
 	  r = {type: 'fun', 
 	       ip: mod.funs[code[ip]][0],
 	       free: free,
@@ -3619,17 +3680,17 @@ function erl_exec() {
 
 	case 75: // call_fun/1 Arity
 	  c_p.cp.push(mod, ip + 1);                 //next opcode
-          var fun = x[code[ip]];
+          var fun = (code[ip]==0) ? r : x[code[ip]];
 	  if (!is_fun(fun)) {
 	    badarg_stacktrace(c_p, fun);
-	    break;
+	    continue new_mod;
 	  }
 	  mod = fun.mod
 	  ip  = fun.ip;
 	  var ar = fun.arity;
 	  if (fun.free.length > 0) {
 	    for (j=0; j < fun.free.length; j++) x[j+ar] = fun.free[j];
-	    r = x[0];
+	    if (ar == 0) r = x[0];
 	  }
 	  continue new_mod;
 
@@ -3654,7 +3715,7 @@ function erl_exec() {
           c_p.fault_class = strToAtom('error');
 	  c_p.stacktrace = stacktrace(c_p);
 	  r = [strToAtom('try_clause'), r]; //TODO always r?
-          break;
+          continue new_mod;
 	
 	case 105: // try_end/1 S1=y
           var t = c_p.catches.pop();
@@ -3676,14 +3737,14 @@ function erl_exec() {
 	   if (!c_p.fault) break;
 	   c_p.fault = false;
 	   ip = code[ip];
-	   continue next;
+	   continue;
 
 	case 11: // bif2/5: Fail Bif S1 S2 Dst
           s(code[ip+4], bif2(c_p, imports[code[ip+1]], g(code[ip+2]), g(code[ip+3])));
 	  if (!c_p.fault) break;
 	  c_p.fault = false;
 	  ip = code[ip];
-	  continue next;
+	  continue;
   
   
 	  // Messages
@@ -3720,22 +3781,10 @@ function erl_exec() {
 	case 23: // loop_rec/2 Fail Msg=r (Fail = no message waiting)
 	  if (c_p.msgs.length != 0) {
 	    r = c_p.msgs[0];
-/*
-	    if (r[0] == strToAtom('EXIT') && r[2] != strToAtom('normal')) { 
-	      debugln1(c_p.name+':LINKED PROCESS '+pp(r[1])+' DIED: '+ pp(r[2]));
-	      if (c_p.trap_exit != am_true) {
-		debugln1(c_p.name+':I SHOULD ALSO EXIT');
-		c_p.fault = true;
-		c_p.stacktrace = false; //Why?
-		c_p.fault_class = strToAtom('exit');
-		r = r[2];
-	      }
-	    }
-*/
 	    break;
 	  }
 	  ip = code[ip];
-	  continue next;
+	  continue;
 	  
 	case 24: // loop_rec_end/1 Fail 
           c_p.msgs.unshift(c_p.msgs.pop()); //TODO not efficient 
@@ -3743,7 +3792,7 @@ function erl_exec() {
 	  if (c_p.cmsg > c_p.msgs.length) { c_p.cmsg = 0; break; } 
 
           ip = code[ip];
-	  continue next;
+	  continue;
 	  
 	case 26: // wait_timeout/2 Label S2=y
           s2 = g(code[ip+1]);
@@ -3790,48 +3839,48 @@ function erl_exec() {
           break;
 	  
 	case 95: //fcheckerror/1 //TODO
-          if (isNaN(fr[code[ip]])) throw 'fcheckerror: NaN '+fr; 
+          if (isNaN(fr[g(code[ip])])) throw 'fcheckerror: NaN '+fr; 
 	  break;
 	   
 	case 96: //fmove From=fr|reg|const Dst=fr|reg
-           s1 = code[ip];
-           s2 = code[ip+1];
+           s1 = g(code[ip]);
+           s2 = g(code[ip+1]);
 //	   debugln1('fmove:'+s1+'='+pp(s1)+', '+s2+'='+pp(s2));
 	   if (s2.type == 'fr') { 
 	     if (s1.type == 'fr') { 
 	       fr[s2.value] = fr[s1.value];
 	     } else {
-	       s1 = g(s1);
+//	       s1 = g(s1);
 	       if (is_float(s1)) fr[s2.value] = s1.value;
 	       else fr[s2.value] = s1;
 	     }
 	   } else if (s1.type == 'fr') { 
 //  	   debugln1('fmove2:'+fr[s1.value]);
-	     s(s2, {type:am_float,value:fr[s1.value]});
+	     s(code[ip+1], {type:am_float,value:fr[s1.value]});
 	   } else {
 	     throw 'Setting ordinary register with value from non-fr register'
 	   }
 	   break;
 
 	case 97:  //fconv From Dst=fr
-           fr[code[ip+1].value] = g(code[ip]);
+           fr[g(code[ip+1]).value] = g(code[ip]);
 	   break;
 
 	case 98: //fadd
-           fr[code[ip+3].value] = fr[code[ip+1].value]+fr[code[ip+2].value];
+           fr[g(code[ip+3]).value] = fr[g(code[ip+1]).value]+fr[g(code[ip+2]).value];
 	   break;
 
 	case 99: //fsub
-           fr[code[ip+3].value] = fr[code[ip+1].value]-fr[code[ip+2].value];
+           fr[g(code[ip+3]).value] = fr[g(code[ip+1]).value]-fr[g(code[ip+2]).value];
 	   break;
 
 	case 100: //fmul
-           fr[code[ip+3].value] = fr[code[ip+1].value]*fr[code[ip+2].value];
+           fr[g(code[ip+3]).value] = fr[g(code[ip+1]).value]*fr[g(code[ip+2]).value];
 	   break;
 
 	case 101: //fdiv Fail?? S1=fr, S2=fr, Dst=fr
-           if(fr[code[ip+2].value] == 0) throw 'div by zero'; //TODO
-           fr[code[ip+3].value] = (fr[code[ip+1].value])/(fr[code[ip+2].value]);
+           if(fr[g(code[ip+2]).value] == 0) throw 'div by zero'; //TODO
+           fr[g(code[ip+3]).value] = (fr[g(code[ip+1]).value])/(fr[g(code[ip+2]).value]);
 	   break;
 
 	case 102: //fnegate/3 //TODO
@@ -3845,7 +3894,7 @@ function erl_exec() {
 	    break;
 	  }
 	  ip = code[ip];
-          continue next;
+          continue;
 
 	case 121: // bs_test_tail2/3 Fail Ms Len?
           var ms = g(code[ip+1]);
@@ -3853,7 +3902,7 @@ function erl_exec() {
 //	  debugln1('test_tail :'+ms.offs+'='+ms.bin.length+'-'+len); 
           if (ms.offs == ms.bin.length-len) break;
 	  ip=code[ip]; 
-	  continue next;
+	  continue;
 
 	case 132: // bs_match_string/4 Fail Ms=x Bits Offs
 	  var bytes = div((code[ip+2]<<5>>5)+1,8);
@@ -3864,7 +3913,7 @@ function erl_exec() {
 //	  debugln1('====='+s1+':'+s2+':'+bytes)
 	  if (s1==s2) break;
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
         case 138: //bs_get_utf8/5 //HACK
           var ms = g(code[ip+1]);
@@ -3874,7 +3923,7 @@ function erl_exec() {
 	    break;
 	  }
 	  ip = code[ip];
-	  continue next;
+	  continue;
 
 	case 120: //bs_skip_bits2/5 Fail Ms Size|all Unit Flags
           var ms = g(code[ip+1]);
@@ -3884,14 +3933,14 @@ function erl_exec() {
 	  else ms.offs += sz*u;
 	  break;
 //	  ip = code[ip];
-//	  continue next;
+//	  continue;
 	  
 	case 117: // bs_get_integer2/7 Fail Ms=x Live Size Unit Flags Dst=x	 
 	 var bytes = div((code[ip+3]<<5>>5)*(code[ip+4]<<5>>5)+1,8);
          var ms = g(code[ip+1]);
 	 var str = ms.bin.substr(ms.offs, bytes);
 	 if (str.length != bytes) {
-	   ip=code[ip]; continue next;
+	   ip=code[ip]; continue;
 	}
 	 var value = 0;
 	 for (j = 0; j < bytes; j++) value = 256*value+str.charCodeAt(j);
@@ -3950,7 +3999,7 @@ function erl_exec() {
 	  s(code[ip+5], str);
 //	  debugln1('bs_init done: -'+strToArray(s)+'-');
 	  ip = next_op;
-	  continue next;
+	  continue;
 	  
 	case 123: // bs_restore2/2 X1=x X2
 	case 122: // bs_save2/2 X1=x X2
@@ -3972,21 +4021,21 @@ function erl_exec() {
           c_p.fault_class = strToAtom('error');
 	  c_p.stacktrace=stacktrace(c_p);
 	  r = [strToAtom('case_clause'), g(code[ip])];
-	  break;
+	  continue new_mod;
 
 	case 73: // if_end/0
           c_p.fault = true;
           c_p.fault_class = strToAtom('error');
 	  c_p.stacktrace=stacktrace(c_p);
 	  r = strToAtom('if_clause');
-	  break;
+	  continue new_mod;
 
 	case 72: // badmatch/1 A=r
           c_p.fault = true;
           c_p.fault_class = strToAtom('error');
 	  c_p.stacktrace=stacktrace(c_p);
 	  r = [strToAtom('badmatch'), g(code[ip])];
-	  break;
+	  continue new_mod;
 	  
 	case 108: //'raise/2'
 	  throw 'TODO raise';
@@ -4004,9 +4053,8 @@ function erl_exec() {
           c_p.fault_class = strToAtom('error');
 	  c_p.stacktrace = {value:[code[ip], code[ip+1], arrayToList(args)], next:2<<27};
 	  r = strToAtom('function_clause');
-//	  debugln1( 'No function clause matching ' + pp(code[ip]) + 
-//	    ':' + pp(code[ip+1]) + '(' + pp(args) + ')');
-	  break;
+	  continue new_mod;
+
 	case 3: // int_code_end/0
 	  throw 'Unexpected fatal, reached code end';
 
@@ -4149,7 +4197,7 @@ var beams = ['start.boot','application', 'application_controller',
 var zz = '';
 function debugln1(s) { 
   if (window.console) console.log(zz+s); 
-  else term.write(-1, [2, zz+s+"\n"]); //This line does not work in konqueror
+//  else term.write(-1, [2, zz+s+"\n"]); //This line does not work in konqueror
 //  term.write(-1, [2, zz+s+"  "]); //This line does not work in konqueror
   zz='';
 }
