@@ -117,6 +117,7 @@ var am_code = loaderStrToAtom('code');
 var am_file = loaderStrToAtom('file');
 var am_math = loaderStrToAtom('math');
 var am_badarg = loaderStrToAtom('badarg');
+var am_badarity = loaderStrToAtom('badarity');
 
 var am_delete_object = loaderStrToAtom('delete_object');
 var am_new = loaderStrToAtom('new');
@@ -1385,16 +1386,6 @@ function bif0(c_p, mfa) {
   }
 }
 
-function badarg(c_p, arg1) {
-  c_p.fault = true;
-  return am_badarg;
-}
-
-function badarith(c_p, arg1) {
-  c_p.fault = true;
-  return [strToAtom('badarith'), arrayToList(stacktrace(c_p))]; //BUG, lacks current function
-}
-
 
 //gc_bif1 - Can fail
 function gc_bif1(c_p, mfa, arg1) {
@@ -1549,6 +1540,22 @@ function badarg_stacktrace(c_p, arg1) {
   return am_badarg;
 }
 
+function badarity_stacktrace(c_p, fun, arg1) {
+  c_p.fault = true;
+  c_p.fault_class = strToAtom('error'); 
+  c_p.stacktrace = stacktrace(c_p);
+  return [am_badarity, [fun, arg1]];
+}
+
+function badarg(c_p, arg1) {
+  c_p.fault = true;
+  return am_badarg;
+}
+
+function badarith(c_p, arg1) {
+  c_p.fault = true;
+  return [strToAtom('badarith'), stacktrace(c_p)]; //BUG, lacks current function
+}
 
 var file_seek = 0; //HACK
 var nowUnique = 1;
@@ -2029,11 +2036,13 @@ function bif(c_p, m, f, a, x) {
 	case am_fun_info: 
 	  if (a!=2) break;
 	  if(!is_fun(x[0])) return badarg_stacktrace(c_p, x[0]);
-	  if(x[1]==strToAtom('module')) return strToAtom(x[0].mod.name);
-	  if(x[1]==strToAtom('env')) return 2<<27; //TODO
+	  if(x[1]==strToAtom('module')) return [x[1], strToAtom(x[0].mod.name)];
+	  if(x[1]==strToAtom('name')) return [x[1], strToAtom('undefined')]; //TODO
+	  if(x[1]==strToAtom('arity')) return [x[1], x[0].arity];
+	  if(x[1]==strToAtom('type')) return [x[1], strToAtom('local')]; 
+	  if(x[1]==strToAtom('env')) return [x[1], arrayToList(x[0].free)]; 
 	  if(x[1]==am_pid) return [am_pid, x[0].pid]; 
 	  throw('unimplemented fun_info:'+ppx(x) );
-	  return strToList('#Fun<0.'+x[0].value+'.0>');
 
 	  
 	  //Tuples
@@ -2365,7 +2374,7 @@ function bif(c_p, m, f, a, x) {
 	  }
 	  c_p.fault = true;
 	  c_p.fault_class = strToAtom('error');
-	  c_p.stacktrace=stacktrace(c_p);
+	  c_p.stacktrace = stacktrace(c_p);
 	  return strToAtom('noproc'); 
 	      
 	case am_unlink:
@@ -2413,13 +2422,13 @@ function bif(c_p, m, f, a, x) {
 	    //    debugln1('error: '+ppx(x))
 	    c_p.fault = true;
 	    c_p.fault_class = strToAtom('error');
-	    c_p.stacktrace=stacktrace(c_p);
+	    c_p.stacktrace = stacktrace(c_p);
 	    return x[0]; 
 	  } else if (a==2) {
 	    //    debugln1('error: '+ppx(x))
 	    c_p.fault = true;
 	    c_p.fault_class = strToAtom('error');
-	    c_p.stacktrace={value:x[1], next:stacktrace(c_p)};
+	    c_p.stacktrace = {value:x[1], next:stacktrace(c_p)};
 	    return x[0]; 
 	  } else break;
 	  
@@ -2779,7 +2788,7 @@ function bif(c_p, m, f, a, x) {
   debugln1(c_p.name+'*** FAILED BifCall to '+pp([m,f,a])+' :'+ppx(x, 'x'));
   c_p.fault = true;
   c_p.fault_class = strToAtom('error');
-  c_p.stacktrace={value:[m.atom, f, a], next:arrayToList(stacktrace(c_p))};
+  c_p.stacktrace={value:[m.atom, f, a], next:stacktrace(c_p)};
   return strToAtom('undef');  
 }
 
@@ -2831,8 +2840,11 @@ function erlangApply(c_p, code, ip, r, x, mod, fun, ar) {
 	      ip  = r.ip;
 	      var len = r.free.length;
 	      ar = r.arity;
+	      var s1 = listToArray(x[1]);
+	      if (ar != s1.length) { 
+		return badarity_stacktrace(c_p, r, x[1]);
+	      }
 	      if (ar > 0) {
-		var s1 = listToArray(x[1]);
 		for (var j=0; j < ar; j++) { 
 		  x[j] = s1[j];
 		}
@@ -3107,7 +3119,7 @@ function stacktrace(c_p) {
     var funarg = ipToFunction(mod,c_p.cp[i]);
     tp.unshift([strToAtom(mod.name), strToAtom(funarg[0]), funarg[1]]);
   }
-  return tp;
+  return arrayToList(tp);
 }
 
 function ipToFunction(mod, ip) {
@@ -3254,7 +3266,7 @@ function erl_exec() {
 	c_p.fault = true;
 	c_p.fault_class = strToAtom('error');
 	c_p.stacktrace = {value: [orig_mod,fun,2<<27], //TODO arity 
-	                          next:arrayToList(stacktrace(c_p))};
+	                          next:stacktrace(c_p)};
 	r = strToAtom('undef'); 
 	debugln1('*** WARNING: undefined module: '+pp(orig_mod))
       } else {
@@ -3411,6 +3423,10 @@ function erl_exec() {
 	  if (op==112) c_p.cp.push(mod, ip + 1);      //next opcode
           var res = erlangApply(c_p, code, ip, r, x, mod, fun, ar);
 	  //[c_p, r, mod, fun, ar, ip]
+	  if (c_p.fault) { 
+	    r = res;
+	    continue new_mod;
+	  }
 	  c_p = res[0];
 	  r = res[1];
 	  mod = res[2];
@@ -3678,7 +3694,7 @@ function erl_exec() {
 	       value: mod.name+'/'+ar+'@'+mod.funs[code[ip]]};
 	  break;
 
-	case 75: // call_fun/1 Arity
+	case 75: // call_fun/1 Fun
 	  c_p.cp.push(mod, ip + 1);                 //next opcode
           var fun = (code[ip]==0) ? r : x[code[ip]];
 	  if (!is_fun(fun)) {
@@ -4019,21 +4035,21 @@ function erl_exec() {
 	case 74: // case_end/1 Unmatched
           c_p.fault = true;
           c_p.fault_class = strToAtom('error');
-	  c_p.stacktrace=stacktrace(c_p);
+	  c_p.stacktrace = stacktrace(c_p);
 	  r = [strToAtom('case_clause'), g(code[ip])];
 	  continue new_mod;
 
 	case 73: // if_end/0
           c_p.fault = true;
           c_p.fault_class = strToAtom('error');
-	  c_p.stacktrace=stacktrace(c_p);
+	  c_p.stacktrace = stacktrace(c_p);
 	  r = strToAtom('if_clause');
 	  continue new_mod;
 
 	case 72: // badmatch/1 A=r
           c_p.fault = true;
           c_p.fault_class = strToAtom('error');
-	  c_p.stacktrace=stacktrace(c_p);
+	  c_p.stacktrace = stacktrace(c_p);
 	  r = [strToAtom('badmatch'), g(code[ip])];
 	  continue new_mod;
 	  
