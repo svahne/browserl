@@ -87,7 +87,7 @@
 
     
       <h2>Dependencies</h2>
-      <p>Known to boot in:
+      <p id="first">Known to boot in:
       Chrome 3-8, 11-16 (fastest, loads to shell prompt in 
            less than a second when hosted on same network), 
       Firefox 3.0, 3.5, 3.6, 4, 5, 6, 7, 8,
@@ -118,7 +118,31 @@ running.</p>
 the standard OTP tests suites for lists, arrays, 
 dicts, random numbers and queues.</p>    
 
-    
+      <h2>Accessing javascript objects and the DOM</h2>
+      <p>The following functions are likely to change, and only shown here as a proof of concept.
+      <p><b>js:eval(String) -> true</b>
+      <p><DD>String = string()</DD>
+ 
+      <p><b>Example:</b>
+      <pre>js:eval("document.getElementById('first').innerHTML = 'some text'").</pre>
+
+      <p><b>js:call(JsObject, Function, Arguments) -> js_object()
+      <br>js:get(JsObject, Property) -> js_object()
+      <br>js:set(JsObject, Property, Value) -> true</b>
+	  
+      <p><DD>JsObject = window | document | js_object()
+	 <DD> Function = atom()
+	 <DD>Property = atom() 
+	 <DD>Arguments = [ atom() ]
+	 <DD>Value = atom() | string() | js_object()</DD>
+	 
+	 <p><b>Examples:</b>
+<pre>Doc = js:get(window, document). 
+MyElem = js:call(Doc, getElementById, [first]).
+MyElem = js:call(document, getElementById, [first]).
+OldContents = js:get(MyElem, innerHTML).
+js:set(MyElem, innerHTML, "some text").
+js:set(MyElem, innerHTML, OldContents).</pre>
 
     
       <h2>License</h2>

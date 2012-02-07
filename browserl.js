@@ -237,6 +237,11 @@ var am_spawn = loaderStrToAtom('spawn');
 var am_spawn_link = loaderStrToAtom('spawn_link');
 var am_nonode_nohost = loaderStrToAtom('nonode@nohost');
 var am_pid = loaderStrToAtom('pid');
+var am_eval = loaderStrToAtom('eval');
+var am_get = loaderStrToAtom('get');
+var am_set = loaderStrToAtom('set');
+var am_call = loaderStrToAtom('call');
+var am_js = loaderStrToAtom('js');
 
 //special characters
 var am_sign_minus = loaderStrToAtom('-');
@@ -937,7 +942,6 @@ function loadBeam(file) {
 //
 // END OF LOADER CODE
 //
-
 
 
 
@@ -2784,6 +2788,125 @@ function bif(c_p, m, f, a, x) {
 	  return {type:am_float, value:Math.log(x[0])};
       }
       
+    case am_js:
+      switch(f) {  
+	/*
+	 * js:eval(String) -> true
+	 * String = string()
+	 * 
+	 * Example:
+	 * js:eval("document.getElementById('first').innerHTML = 'some text'").
+	 */
+
+	case am_eval:
+	  if (a!=1) break;
+	  if (!is_list(x[0])) return badarg_stacktrace(c_p, x[0]);
+	  try {
+	    eval(listToStr(x[0]));
+	    return am_true;
+	  } catch (e) {
+	    return badarg_stacktrace(c_p, x[0]);
+	  }
+	  
+	/*
+	 * js:call(JsObject, Function, Arguments) -> js_object()
+	 * js:get(JsObject, Property) -> js_object()
+	 * js:set(JsObject, Property, Value) -> true
+	 * 
+	 * JsObject = window | document | js_object()
+	 * Function = atom()
+	 * Property = atom() 
+	 * Arguments = [ atom() ]
+	 * Value = atom() | string() | js_object()
+	 * 
+	 * Examples:
+	 * Doc = js:get(window, document). 
+	 * MyElem = js:call(Doc, getElementById, [first]).
+	 * MyElem = js:call(document, getElementById, [first]).
+	 * OldContents = js:get(MyElem, innerHTML).
+	 * js:set(MyElem, innerHTML, "some text").
+	 * js:set(MyElem, innerHTML, OldContents).
+	 */
+	  
+	case am_get:
+	  if (a!=2) break;
+	  var object, property, result;
+	    
+	  if (is_atom(x[0])) {
+	    object = atomToStr(x[0]);
+	    if (object == "window") object = window;
+	    if (object == "document") object = document;
+	  }
+	  else if (is_pid(x[0]) && x[0].subtype == 'pseudoPid') object = x[0].value;
+	  else return badarg_stacktrace(c_p, x[0]);
+	  
+	  if (is_atom(x[1])) property = atomToStr(x[1]);
+	  else return badarg_stacktrace(c_p, x[1]);
+	  
+	  try {
+	    result = object[property];
+	    if (result == undefined) return badarg_stacktrace(c_p, x[1]);
+	    return {type: am_pid, subtype: 'pseudoPid', value: result };
+	  } catch (e) { 
+	    return badarg_stacktrace(c_p, x[1]); 
+	  }
+	  
+	case am_set:
+	  if (a!=3) break;
+	  var object, property, value;
+	  
+	  if (is_atom(x[0])) {
+	    object = atomToStr(x[0]);
+	    if (object == "window") object = window;
+	    if (object == "document") object = document;
+	  }
+	  else if (is_pid(x[0]) && x[0].subtype == 'pseudoPid') object = x[0].value;
+	  else return badarg_stacktrace(c_p, x[0]);
+	  
+	  if (is_atom(x[1])) property = atomToStr(x[1]);
+	  else return badarg_stacktrace(c_p, x[1]);
+	  
+	  if (is_list(x[2])) value = listToStr(x[2]);
+	  else if (is_atom(x[2])) value = atomToStr(x[2]);
+	  else if (is_pid(x[2]) && x[2].subtype == 'pseudoPid') value = x[2].value;
+	  else badarg_stacktrace(c_p, x[2]);
+	  
+	  try {
+	    object[property] = value;
+	    return am_true;
+	  } catch (e) {
+	    return badarg_stacktrace(c_p, x[1]);
+	  }
+	  
+	case am_call:
+	  if (a!=3) break;
+	  var object, method, args1, args2 = [], result;
+	  
+	  if (is_atom(x[0])) {
+	    object = atomToStr(x[0]);
+	    if (object == "window") object = window;
+	    if (object == "document") object = document;
+	  }
+	  else if (is_pid(x[0]) && x[0].subtype == 'pseudoPid') object = x[0].value;
+	  else return badarg_stacktrace(c_p, x[0]);
+	  
+	  if (is_atom(x[1])) method = atomToStr(x[1]);
+	  else return badarg_stacktrace(c_p, x[1]);
+	  
+	  if (!is_list(x[2])) return badarg_stacktrace(c_p, x[2]);
+	  args1 = listToArray(x[2]);
+	  for (i = 0; i < args1.length; i++)
+	    if (!is_atom(args1[i])) return badarg_stacktrace(c_p, x[2]);
+	    else args2.push(atomToStr(args1[i]));
+	    
+	    try {
+	      result = object[method].apply(object, args2);
+	      return {type: am_pid, subtype: 'pseudoPid', value: result };
+	    } catch (e) {
+	      return badarg_stacktrace(c_p, x[1]);
+	    }
+	    
+      }      
   } 
   debugln1(c_p.name+'*** FAILED BifCall to '+pp([m,f,a])+' :'+ppx(x, 'x'));
   c_p.fault = true;
@@ -2809,6 +2932,7 @@ function erlangSpawn(c_p, mod, fun, arg, linked) {
 
 function erlangSend(to, msg, options) {
     var receiver;
+    if (to.subtype == 'pseudoPid') return sendToDOM(to, msg);
     if ((to >> 27) == 2) receiver = procs[reg_procs[to].value]; //regname
     else if(to.type == 'port') receiver = to; //port
     else receiver = procs[to.value]; //pid
@@ -2819,6 +2943,11 @@ function erlangSend(to, msg, options) {
 //      debugln1(': Sent '+pp(msg)+' to '+pp(receiver.name)+' '+run_queue);
     }
     return strToAtom('ok');
+}
+
+//TODO
+function sendToDOM(to, msg) {
+  throw "TODO";
 }
 
 function erlangExit(c_p, target, reason) {
@@ -3185,6 +3314,8 @@ function run() {
   var elapsed = Date.now()-start;
   debugln1('load time: '+elapsed);
 
+  Modules[am_js] = {atom:am_js, exports:{}}; //An fake module for the JS bifs
+  
   var arg = arrayToList([0, arrayToList(['-root', '/otp_src_R14B04', '-progname',
   		     'erl', '-async_shell_start',
 		     '-mode', 'minimal', '--', '-home', '/tmp', '--'])]); 
