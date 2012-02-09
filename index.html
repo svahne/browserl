@@ -73,21 +73,40 @@
     </div>
     <div id="terminal" class="term"></div>
     <br clear="all">
-    <script type="text/javascript">
-//      try { 
-        var term = new Terminal('terminal');
-        run(); 
-//      } catch(e) {
-//        document.write(e.toString()); 
-//        throw "error:"+e;
-//      }
-      </script>
 
     
+      <h2>How to set up and start</h2>
+      <p id="first">
+      1. Clone or download source code to a local directory:
+      <pre>git clone git://github.com/svahne/browserl
+cd browserl
+</pre>
+      2. Start a web server of your choice
+      <p>For instance, with inets you would start Erlang in the browserl base directory
+      and then at the Erlang shell prompt do:
+      <pre>inets:start(), inets:start(httpd, [{port, 3333}, {server_name,""},
+{server_root,"."},  {document_root,"."}]).</pre>
+      You would typically want to be behind a firewall if you do this.
+      <p>3. Open 127.0.0.1:3333/index.html in your browser.
+      <p>Optionally: 
+      <p>4. Add your own beam files.
+      <p>You can either add your files to beams/beamfiles.tar, e.g:
+      <pre>tar --append --file beams/beamfiles.tar myfile.beam</pre>
+      or you could add them to the list of arguments given to the run() function 
+      (in this example the run() function is called from index.html).
+      <pre>run(mod, fun, args, ['start.boot', 'beamfiles.tar', 'mybeam']); </pre>
+      <p> run() takes as its' arguments the initial module, function and arguments and a 
+      list of beamfiles (without the .beam extension!) or tarballs containing 
+      beamfiles. The initial module, function
+      and arguments can point directly to your own module which might typically be 
+      what you want for simple programs with limited dependencies towards the 
+      Erlang/OTP libraries. If you point to your own initial function you should
+      be prepared for that e.g. io:format() will not work since it requires some
+      basic io servers to be started which is normally done during the boot. BIF 
+      calls like js:eval/1, js:call/3, etc will always work.
 
-    
       <h2>Dependencies</h2>
-      <p id="first">Known to boot in:
+      <p>Known to boot in:
       Chrome 3-8, 11-16 (fastest, loads to shell prompt in 
            less than a second when hosted on same network), 
       Firefox 3.0, 3.5, 3.6, 4, 5, 6, 7, 8,
@@ -177,6 +196,19 @@ js:set(MyElem, innerHTML, OldContents).</pre>
     </div>
 
   </div>
+
+    <script type="text/javascript">
+        var term = new Terminal('terminal');
+        var mod = 'otp_ring0';
+        var fun = 'start'
+        var args = arrayToList([0, arrayToList(['-root', '/otp_src_R14B04', 
+                                               '-progname', 'erl', 
+                                               '-async_shell_start',
+		                               '-mode', 'minimal', '--', 
+                                               '-home', '/tmp', '--'])]); 
+//        run('test', 'start', arrayToList([]), ['start.boot', 'beamfiles.tar', 'test']); 
+        run(mod, fun, args, ['start.boot', 'beamfiles.tar']); 
+      </script>
 
 </body>
 </html>

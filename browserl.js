@@ -3306,25 +3306,20 @@ function exec_port(port) {
 var run_queue = [], timer_queue = [], hproc = 0, ets_counter = 0, ets_tables = {};
 var procs = [], reg_procs = {}, uniqueRef = 0;
 
-function run() {
+function run(mod, fun, args, files) {
   var i, x = [], c_p, mod, ip;
 
   var start = Date.now();
-  for (i = 0; i < beams.length; i++) loadBeam(beams[i]);
+  for (i = 0; i < files.length; i++) loadBeam(files[i]);
   var elapsed = Date.now()-start;
   debugln1('load time: '+elapsed);
 
   Modules[am_js] = {atom:am_js, exports:{}}; //An fake module for the JS bifs
   
-  var arg = arrayToList([0, arrayToList(['-root', '/otp_src_R14B04', '-progname',
-  		     'erl', '-async_shell_start',
-		     '-mode', 'minimal', '--', '-home', '/tmp', '--'])]); 
-  erlangSpawn(-1, strToAtom('otp_ring0'), strToAtom('start'), arg, false);
+  erlangSpawn(-1, strToAtom(mod), strToAtom(fun), args, false);
 
-  run_queue.push(c_p);
   try { 
     start1 = Date.now();
-    
     erl_exec(); 
   } catch(e) {
     document.write('Error while starting beam emu:'+e.toString());
@@ -3416,6 +3411,7 @@ function erl_exec() {
 	  r = bif(c_p, mod, fun, ar, x);
 	  ip = c_p.cp.pop();
 	  mod = c_p.cp.pop();
+	  if (mod == undefined && !c_p.fault) continue new_proc;
 	} else {
 	  ip = exported_arities[ar];
 	}	
@@ -4271,74 +4267,7 @@ function erl_exec() {
   } //new_proc
 } //run
 
-var beams = ['start.boot', 'beamfiles.tar'];
-/*
-var beams = ['start.boot','otp_ring0','init','prim_inet','prim_file','zlib',
-'prim_zip','erl_prim_loader','erlang','error_handler','heart','error_logger',
-'gen_event','gen','proc_lib','application_controller','lists','gen_server',
-'application','sys','application_master','kernel','supervisor','dict','rpc',
-'gb_trees','global','inet_db', 'binary',
-'inet_config','os','inet_udp','inet','inet_parse','inet_gethost_native',
-'filename','erl_distribution','global_group','net_kernel','file_server',
-'code','code_server','packages',//'hipe_unified_loader',
-'gb_sets','ets','beam_lib','file','ram_file','standard_error','supervisor_bridge',
-'user_sup','user_drv','group','edlin','io_lib','proplists','io_lib_format',
-'shell','kernel_config','error_logger_tty_h','c','erl_eval','orddict',
-'file_io_server','erl_lint','ordsets','sets','io','unicode', 'erl_scan', 
-'erl_parse', 'otp_internal', 'erl_internal', 'io_lib_pretty', 'estone', 
-'lib', 'timer', 'erl_bits', 'eval_bits', 'erl_posix_msg', 'shell_default','string',
-'filelib', 'calendar', 'auth', 'math','random', 'erl_pp', 'queue', 'array', 
 
-//For common test
-'vts','ct', 'ct_config', 'ct_event', 'ct_framework', 'ct_hooks', 'ct_hooks_lock', 
-'ct_logs', 'ct_make', 'ct_repeat', 'ct_run', 'ct_util',
-'test_server', 'test_server_ctrl', 'test_server_h', 'test_server_line', 
-'test_server_node', 'test_server_sup','ts_install_cth',
-
-//Test suites
-'dict_SUITE', 'dict_test_lib', 'queue_SUITE', 'lists_SUITE', 'array_SUITE', 
-'random_SUITE', 'sets_SUITE', 'sets_test_lib'
-//'calendar_SUITE', 'digraph_SUITE'
-
-];
-
-/*
-var beams = ['start.boot','application', 'application_controller', 
-'application_master', 'application_starter', 'array', 'auth', //'base64', 
-'beam_lib', 'binary', 'calendar', 'c', 'code', 'code_server', 'ct', 'ct_config', 
-'ct_config_plain', 'ct_config_xml', 'ct_cover', 'ct_event', 'ct_framework', 
-'ct_ftp', 'ct_gen_conn', 'ct_hooks', 'ct_hooks_lock', 'ct_line', 'ct_logs', 
-'ct_make', 'ct_master', 'ct_master_event', 'ct_master_logs', 'ct_master_status', 
-'ct_repeat', 'ct_rpc', 'ct_run', 'ct_slave', 'ct_snmp', 'ct_ssh', 'ct_telnet', 
-'ct_telnet_client', 'ct_testspec', 'ct_util', 'dets', 'dets_server', 'dets_sup', 
-'dets_utils', 'dets_v8', 'dets_v9', 'dict', 'dict_SUITE', 'digraph', 'digraph_utils', 
-'disk_log_1', 'disk_log', 'disk_log_server', 'disk_log_sup', 'dist_ac', 'dist_util', 
-'edlin', 'edlin_expand', 'epp', 'erl2html2', 'erlang', 'erl_bits', 'erl_boot_server', 
-'erl_compile', 'erl_ddll', 'erl_distribution', 'erl_epmd', 'erl_eval', 
-'erl_expand_records', 'erl_internal', 'erl_lint', 'erl_parse', 'erl_posix_msg', 
-'erl_pp', 'erl_prim_loader', 'erl_reply', 'erl_scan', 'erl_tar', 'error_handler', 
-'error_logger', 'error_logger_file_h', 'error_logger_tty_h', 'erts_debug', 'escript', 
-'estone', 'estone_SUITE', 'ets', 'eval_bits', 'file', 'file_io_server', 'filelib', 
-'filename', 'file_server', 'file_sorter', 'gb_sets', 'gb_trees', 'gen', 'gen_event', 
-'gen_fsm', 'gen_sctp', 'gen_server', 'gen_tcp', 'gen_udp', 'global', 'global_group', 
-'global_search', 'group', 'heart', 'hello', 'hipe_unified_loader', 'inet6_sctp', 
-'inet6_tcp', 'inet6_tcp_dist', 'inet6_udp', 'inet', 'inet_config', 'inet_db', 
-'inet_dns', 'inet_gethost_native', 'inet_hosts', 'inet_parse', 'inet_res', 
-'inet_sctp', 'inet_tcp', 'inet_tcp_dist', 'inet_udp', 'init', 'io', 'io_lib', 
-'io_lib_format', 'io_lib_fread', 'io_lib_pretty', 'kernel', 'kernel_config', 'lib', 
-'lists', 'log_mf_h', 'math', 'ms_transform', 'net_adm', 'net', 'net_kernel', 
-'orddict', 'ordsets', 'os', 'otp_internal', 'otp_ring0', 'packages', 'pg2', 
-'pg', 'pool', 'prim_file', 'prim_inet', 'prim_zip', 'proc_lib', 'proplists', 
-'qlc', 'qlc_pt', 'queue', 'ram_file', 'random', 're', 'regexp', 'rpc', 'seq_trace', 
-'sets', 'shell', 'shell_default', 'slave', 'sofs', 'standard_error', 'string', 
-'supervisor','supervisor_bridge', 'sys', 'test_server', 'test_server_ctrl', 
-'test_server_h', 'test_server_line', 'test_server_node', 'test_server_sup', 
-'timer', 'ts_autoconf_vxworks', 'ts_autoconf_win32', 'ts', 'ts_erl_config', 
-'ts_install', 'ts_install_cth', 'ts_lib', 'ts_make', 'ts_reports', 'ts_run', 
-'unicode', 'unix_telnet', 'user', 'user_drv', 'user_sup', 'vts', 'vxworks_client', 
-'win32reg', 'wrap_log_reader', 'zip', 'zlib'
-];
-*/
 
 //Debugging help
 var zz = '';
