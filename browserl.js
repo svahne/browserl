@@ -2289,7 +2289,6 @@ function bif(c_p, m, f, a, x) {
 	case am_display: 
 	  if (a!=1) break;
 	  //TODO
-//	     console.log(pp(x[0]));
 	  return am_true;
 	  
 	case am_bump_reductions: 
