@@ -2032,7 +2032,7 @@ function bif(c_p, m, f, a, x) {
 	    node_name = x[0];
 	    return am_true;
 	  } else if (a == 3) {
-	    console.log("SETNODE"+pp(x[0])+pp(x[1]));
+//	    console.log("SETNODE"+pp(x[0])+pp(x[1]));
 	    node_name = x[0];
 	    return am_true;	    
 	  }
@@ -2110,7 +2110,7 @@ function bif(c_p, m, f, a, x) {
 	case am_list_to_integer: 
 	  if (a!=1) break;
 	  //TODO handle NaN
-	  console.log("LIST_TO_INTEGER: "+pp(x[0]));
+//	  console.log("LIST_TO_INTEGER: "+pp(x[0]));
 	  if (!is_list(x[0])) return badarg_stacktrace(c_p, x[0]);
 	  var str = listToStr(x[0]), n = Number(str);
 	  if (isNaN(n)) return badarg_stacktrace(c_p, x[0]);
@@ -3592,7 +3592,11 @@ function run(mod, fun, args, files) {
   
   erlangSpawn(-1, strToAtom(mod), strToAtom(fun), args, false);
 
-  erl_exec(); 
+  try {
+  	erl_exec();
+  } catch (e) {
+  	document.write(e);
+  }
 }
 
 var debug = false, debug_pid = -1;
