@@ -3591,8 +3591,9 @@ function run(mod, fun, args, files) {
   Modules[am_browserl_dist] = {atom:am_browserl_dist, exports:{}}; 
   
   erlangSpawn(-1, strToAtom(mod), strToAtom(fun), args, false);
-
-  erl_exec(); 
+  try {
+    erl_exec(); 
+  } catch (e) { document.write(e); }
 }
 
 var debug = false, debug_pid = -1;
