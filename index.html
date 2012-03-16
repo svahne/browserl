@@ -32,7 +32,8 @@
   <!--[if IE]>
     <script type="text/vbscript" src="vbarray.vbscript"></script>
   <![endif]-->
-  <script type="text/javascript" src="jquery-1.7.1.min.js"></script>
+  <script type="text/javascript" src="sockjs/sockjs-0.2.min.js"></script>
+  <script type="text/javascript" src="jquery/jquery-1.7.1.min.js"></script>
   <script type="text/javascript" src="term/term.js"></script>
   <script type="text/javascript" src="hapint/hapint.es"></script>
   <script type="text/javascript" src="zlib/zlib.js"></script>
@@ -200,13 +201,27 @@ js:set(MyElem, innerHTML, OldContents).</pre>
     <script type="text/javascript">
         var term = new Terminal('terminal');
         var mod = 'otp_ring0';
-        var fun = 'start'
+        var fun = 'start';
+        var random = Date.now();
         var args = arrayToList([0, arrayToList(['-root', '/otp_src_R14B04', 
                                                '-progname', 'erl', 
                                                '-async_shell_start',
 		                               '-mode', 'minimal', '--', 
                                                '-home', '/tmp', '--'])]); 
+        var args_distr = arrayToList([0, 
+                                      arrayToList(['-root', '/otp_src_R14B04', 
+                                                   '-progname', 'erl', 
+                                                   '-async_shell_start',
+                                                   '-sname', 'browser'+random+'@somehost',
+                                                   '-no_epmd',
+                                                   '-proto_dist', 'browserl',
+                                                   '--', 
+                                                   '-home', '/tmp', '--'])]); 
+//Uncomment the following line to call your own function test:start().
 //        run('test', 'start', arrayToList([]), ['start.boot', 'beamfiles.tar', 'test']); 
+//Uncomment following line to test the distributed version
+//        run(mod, fun, args_distr, ['start.boot', 'beamfiles.tar']); 
+//Uncomment following line to run a non-distributed system
         run(mod, fun, args, ['start.boot', 'beamfiles.tar']); 
       </script>
 

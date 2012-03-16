@@ -59,7 +59,7 @@ Terminal.prototype.keypress = function (event) {
   if (event.keyCode == 32 || event.charCode == 32) event.preventDefault();
   if (event.keyCode == 167) {
     char = undefined;
-    var command = "global:start(), ct:run_test([{suite,dict_SUITE},{auto_compile, false}, {basic_html, true}, batch]).\n";
+    var command = "global:start(), ct:run_test([{suite,array_SUITE},{auto_compile, false}, {basic_html, true}, batch]).\n";
     for (var i=0; i<command.length; i++) 
       term_callback(this.port, command[i]);
   } else if (event.which == null)
