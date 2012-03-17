@@ -3594,7 +3594,7 @@ function run(mod, fun, args, files) {
   try {
   	erl_exec();
   } catch (e) {
-  	document.write(e);
+  	debugln1(e.toString());
   }
 }
 
@@ -4587,7 +4587,10 @@ try {
 //Debugging help
 var zz = '';
 function debugln1(s) { 
-  if (window.console) console.log(zz+s); 
+  if (window.console) console.log(zz+s);
+  try { 
+    document.getElementById("console").innerHTML = s;
+  } catch (e) {}
 //  else term.write(-1, [2, zz+s+"\n"]); //This line does not work in konqueror
 //  term.write(-1, [2, zz+s+"  "]); //This line does not work in konqueror
   zz='';
