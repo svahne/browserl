@@ -3580,9 +3580,14 @@ var procs = [], reg_procs = {}, uniqueRef = 0;
 function run(mod, fun, args, files) {
   var i, x = [], c_p, mod, ip;
 
-  var start = Date.now();
-  for (i = 0; i < files.length; i++) loadBeam(files[i]);
-  var elapsed = Date.now()-start;
+  try {
+    var start = Date.now();
+    for (i = 0; i < files.length; i++) loadBeam(files[i]);
+    var elapsed = Date.now()-start;
+  } catch (e) {
+  	debugln1(e.toString());    
+  }
+  
 //  debugln1('load time: '+elapsed);
 
   //Fake module for the JS bifs and distribution protocol
