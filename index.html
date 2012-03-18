@@ -199,10 +199,11 @@ js:set(MyElem, innerHTML, OldContents).</pre>
   </div>
 
     <script type="text/javascript">
+     try {
         var term = new Terminal('terminal');
         var mod = 'otp_ring0';
         var fun = 'start';
-        var random = Date.now();
+        var random = Math.round(Math.random()*1000000);
         var args = arrayToList([0, arrayToList(['-root', '/otp_src_R14B04', 
                                                '-progname', 'erl', 
                                                '-async_shell_start',
@@ -223,6 +224,9 @@ js:set(MyElem, innerHTML, OldContents).</pre>
 //        run(mod, fun, args_distr, ['start.boot', 'beamfiles.tar']); 
 //Uncomment following line to run a non-distributed system
         run(mod, fun, args, ['start.boot', 'beamfiles.tar']); 
+       } catch (e) {
+          document.getElementById("statusconsole").innerHTML = e.toString();
+       }
       </script>
 
 </body>

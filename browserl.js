@@ -3579,14 +3579,9 @@ var procs = [], reg_procs = {}, uniqueRef = 0;
 
 function run(mod, fun, args, files) {
   var i, x = [], c_p, mod, ip;
-
-  try {
-    var start = Date.now();
-    for (i = 0; i < files.length; i++) loadBeam(files[i]);
-    var elapsed = Date.now()-start;
-  } catch (e) {
-  	debugln1(e.toString());    
-  }
+  var start = Date.now();
+  for (i = 0; i < files.length; i++) loadBeam(files[i]);
+  var elapsed = Date.now()-start;
   
 //  debugln1('load time: '+elapsed);
 
@@ -3596,11 +3591,7 @@ function run(mod, fun, args, files) {
   
   erlangSpawn(-1, strToAtom(mod), strToAtom(fun), args, false);
 
-  try {
-  	erl_exec();
-  } catch (e) {
-  	debugln1(e.toString());
-  }
+  erl_exec();
 }
 
 var debug = false, debug_pid = -1;
