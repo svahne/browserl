@@ -1021,7 +1021,6 @@ function loadBeam(file) {
 	case 87: //'bs_init/2'
 	case 88: //'bs_final/2'
 
-//	case 90: //'bs_put_binary/5'
 	case 93: //'bs_need_buf/1'
           throw 'unsupported '+op;
       }
@@ -2165,7 +2164,7 @@ function bif(c_p, m, f, a, x) {
 	    if (!is_binary(x[0])) return badarg_stacktrace(c_p, x[0]);
 	    if (!is_integer(x[1])) return badarg_stacktrace(c_p, x[1]);
 	    if (!is_integer(x[2])) return badarg_stacktrace(c_p, x[2]);
-	    return strToList(x[0].substr(x[1],x[2]-x[1]));
+	    return strToList(x[0].substr(x[1]-1,x[2]-x[1]+1));
 	  }
 	  break;
 	  
@@ -3603,7 +3602,11 @@ function erl_exec() {
   
   var j, op, s1, s2, s3, need, r, tp, reds; 
   var x, y, fun, ar, name, mod, ip, c_p, fr = []; 
+  
+  //for bitstrings
+  var bs_str, bs_size, bs_dst;
 
+  //this function must always be used when target may be a register
   function g(arg) {
     switch (arg >> 27) {
       case 5: return r;
@@ -3665,7 +3668,7 @@ function erl_exec() {
 	debugln1('*** WARNING: undefined module: '+pp(orig_mod))
       } else {
 
-/*
+///*
 	if (debug || name == debug_pid){
 	  debugln1()
 	  x[0]=r; debugln1(name+':ExtCall to ' + mod.name + ':'+ 
@@ -3748,7 +3751,7 @@ function erl_exec() {
 	case 6:   // call_only/2 (Ar) Func 
 	  ip = code[ip + 1];
 	  reds--;
-/*	  
+///*	  
           if(debug || name == debug_pid) {
 	    debugln1('');
 	    debugln1(name+':call '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
@@ -3765,7 +3768,7 @@ function erl_exec() {
 	  y.length -= code[ip + 2];
 	  ip = code[ip + 1];
 	  reds--;
-/*	  
+///*	  
 	  if (debug || name == debug_pid) {
 	    debugln1(''); 
 	    debugln1(name+':call last '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
@@ -4280,31 +4283,30 @@ function erl_exec() {
 	case 102: //fnegate/3 //TODO
            throw 'TODO: fnegate: '+ppx(x);
 
+	   
 	  // Bitstrings
-	case 116: // bs_start_match2/5 Fail Reg Live Max/Slots Ms
-          var bin = g(code[ip+1]);
-          if (is_binary(bin)) {
-	    s(code[ip+4], {type:'matchspec', bin: bin, offs: 0 });
+	case 116: // bs_start_match2/5 Fail Src Live Max/Slots Ms
+          s1 = g(code[ip+1]);
+          if (is_binary(s1)) {
+	    s(code[ip+4], {type:'matchspec', bin: s1, offs: 0 });
 	    break;
 	  }
 	  ip = code[ip];
           continue;
 
-	case 121: // bs_test_tail2/3 Fail Ms Len?
+	case 121: // bs_test_tail2/3 Fail Ms Len
           var ms = g(code[ip+1]);
 	  var len = code[ip+2];
-//	  debugln1('test_tail :'+ms.offs+'='+ms.bin.length+'-'+len); 
           if (ms.offs == ms.bin.length-len) break;
 	  ip=code[ip]; 
 	  continue;
 
 	case 132: // bs_match_string/4 Fail Ms=x Bits Offs
-	  var bytes = div((code[ip+2]<<5>>5)+1,8);
+	  var bytes = div(g(code[ip+2])+1,8);
 	  var ms = g(code[ip+1]);
-	  s1 = strings.substr(code[ip+3]<<5>>5,bytes);
+	  s1 = strings.substr(code[ip+3],bytes);
 	  s2 = ms.bin.substr(ms.offs, bytes);
 	  g(code[ip+1]).offs += bytes;
-//	  debugln1('====='+s1+':'+s2+':'+bytes)
 	  if (s1==s2) break;
 	  ip = code[ip];
 	  continue;
@@ -4326,20 +4328,21 @@ function erl_exec() {
 	  if (sz==strToAtom('all')) ms.offs = ms.bin.length;
 	  else ms.offs += sz*u;
 	  break;
+	  //TODO fail case?
 //	  ip = code[ip];
 //	  continue;
 	  
 	case 117: // bs_get_integer2/7 Fail Ms=x Live Size Unit Flags Dst=x	 
-	 var bytes = div((code[ip+3]<<5>>5)*(code[ip+4]<<5>>5)+1,8);
+	 var bytes = div(g(code[ip+3])*g(code[ip+4])+1,8);
          var ms = g(code[ip+1]);
 	 var str = ms.bin.substr(ms.offs, bytes);
 	 if (str.length != bytes) {
-	   ip=code[ip]; continue;
-	}
-	 var value = 0;
+	   ip=code[ip]; 
+	   continue;
+	 }
+	 var value = 0; //TODO will not handle very large bigints
 	 for (j = 0; j < bytes; j++) value = 256*value+str.charCodeAt(j);
 	 ms.offs += bytes;
-//         debugln1('!!!!!!!!!!!!'+value+':'+bytes)
 	 if (is_big(value)) value = Math.BigInt.valueOf(value);
 	 s(code[ip+6], value);
 	 break;
@@ -4350,64 +4353,90 @@ function erl_exec() {
          break;
 
 	 //Creating binaries
+
+	case 111: // bs_add/5 Fail S1=#units S2bits Unit Dst
+         s1 = g(code[ip+1]);	   
+         s2 = g(code[ip+2]);
+         var unit = g(code[ip+3]);
+	 s(code[ip+4], s1*unit+s2);
+	 break;
+
+	case 137: //bs_init_bits/6 Fail Sz=#bits Words Regs Flags Dst=x
+         bs_str = '';
+	 bs_size = g(code[ip+1]);
+	 bs_dst = code[ip+5];
+	 break;
+
 	case 109: // bs_init2/6 Fail Sz Words Regs Flags Dst=x
-          var str = '';
-	  var size = code[ip+1]<<5>>5;
-	  var next_op = ip + 6;
-	  while (size) {
-	    switch (code[next_op++]) {
-	      case 89: // bs_put_integer/5 Fail Size Unit Flags Src=x 8 1 0 1
-                var bytes = div((code[next_op+1]<<5>>5)*(code[next_op+2]<<5>>5), 8);
-//		if (bytes == 1) s += String.fromCharCode(x[code[next_op+4]]);
-		s1 = g(code[next_op+4]);
-		s2 = '';
-		for (j = 0; j < bytes; j++) {
-		  s2 += String.fromCharCode(s1&255);
-		  s1 = s1 >> 8;
-		}
-		str += s2.split('').reverse().join('');
-//		else throw 'TODO put integers > 255:' + bytes;
-//		console.log('65625: -'+strToArray(str)+'-'+bytes);
-//                next_op += 5;
-		size -= bytes;
-                next_op += 5;
-		break;
-	      case 92: // bs_put_string/2 Len Offs
-	        var bytes = code[next_op]<<5>>5;
-		str += strings.substr(code[next_op+1]<<5>>5,bytes);
-		next_op += 2;
-		size -= 1;
-//		debugln1('92: -'+strToArray(str)+'-');
-		break;
-	      case 91: // bs_put_float/5 Len Offs 
-	        var bytes = code[next_op]<<5>>5;
-		str += '\0\0AAAA\0\0\0\0\0\0\0\0';
-		next_op += 5;
-		size -= 8;
-//		debugln1('91:'+ppx(x)+' -'+strToArray(str)+'-');
-		break;
-	      case 90: //bs_put_binary/5 //TODO
-	      default: throw 'unknown op in bs_init: '+next_op;
-	    }
+          bs_str = '';
+	  bs_size = g(code[ip+1])*8;
+	  bs_dst = code[ip+5];
+	  break;
+
+	case 134: //'bs_append/8'  Fail Size Extra Live Unit Bin Flags Dst
+          bs_str = g(code[ip+5]);
+	  bs_size = g(code[ip+1]);
+	  bs_dst = code[ip+7];
+	  break;
+	  
+	case 89: // bs_put_integer/5 Fail Size Unit Flags Src=x 8 1 0 1
+          //TODO bigints
+          var bytes = div(g(code[ip+1])*g(code[ip+2]), 8);
+	  s1 = g(code[ip+4]);
+	  s2 = '';
+	  for (j = 0; j < bytes; j++) {
+	    s2 += String.fromCharCode(s1&255);
+	    s1 = s1 >> 8;
 	  }
-	  s(code[ip+5], str);
-//	  debugln1('bs_init done: -'+strToArray(s)+'-');
-	  ip = next_op;
-	  continue;
+	  bs_str += s2.split('').reverse().join(''); //TODO optimize me
+	  bs_size -= bytes*8;
+	  if (bs_size <= 0) {
+	    s(bs_dst, bs_str);
+	  }
+	  break;
+
+	case 92: // bs_put_string/2 Len Offs
+	  var bytes = g(code[ip]);
+	  bs_str += strings.substr(code[ip+1],bytes);
+	  bs_size -= bytes*8;
+	  if (bs_size <= 0) s(bs_dst, bs_str);
+	  break;
+	  
+	case 91: // bs_put_float/5 Len Offs //HACK
+	  var bytes = g(code[ip]);
+	  bs_str += '\0\0AAAA\0\0\0\0\0\0\0\0';
+	  bs_size -= 8*bytes;
+	  if (bs_size <= 0) s(bs_dst, bs_str);
+	  //		debugln1('91:'+ppx(x)+' -'+strToArray(str)+'-');
+	  break;
+		
+	case 90: //bs_put_binary/5 Fail Size|all Unit Flags Src
+          var sz = g(code[ip+1]);
+	  var src = g(code[ip+4]);
+	  if (sz==strToAtom('all')) {
+	    bs_str += src;
+	    bs_size -= src.length*8;
+	  } else {  
+	    var bytes = div(sz*g(code[ip+2]), 8);
+	    bs_str += src.substr(0,bytes);
+	    bs_size -= bytes*8;
+	  }
+	  if (bs_size <= 0) s(bs_dst, bs_str);
+	  break;
 	  
 	case 123: // bs_restore2/2 X1=x X2
 	case 122: // bs_save2/2 X1=x X2
           break;
 
-	case 111: // bs_add/5 Fail S1 S2 Unit Dst
-           s1 = g(code[ip]);	   
-           s2 = g(code[ip]);
-           disasm(mod, ip-1);
-           throw ppx(x);
 
 	case 130: // bs_context_to_binary/5
-           disasm(mod, ip-1);
-           throw ppx(x);
+           r = r.bin;
+	   if (r == undefined) {
+	     c_p.fault = true;
+	     c_p.fault_class = strToAtom('error');
+	     c_p.stacktrace = stacktrace(c_p);
+	   }
+	   break;
 
 	  // Faults
 	case 74: // case_end/1 Unmatched
@@ -4462,9 +4491,7 @@ function erl_exec() {
 	case 129: 'is_bitstr/2'
 	case 131: 'bs_test_unit/3'
 	case 133: 'bs_init_writable/0'
-	case 134: 'bs_append/8'
 	case 135: 'bs_private_append/6'
-	case 137: 'bs_init_bits/6'
 	  //utf8,16,32 support
 	case 139: 'bs_skip_utf8/4'
 	case 140: 'bs_get_utf16/5'
@@ -4672,7 +4699,8 @@ function pp(xx) {
 	case 3: return 'x'+val+' ';
 	case 4: return 'y'+val+' ';
 	case 5: return 'r';
-	case 6: return 'h'+val;
+//	case 6: return 'h'+val;
+	case 6: return 'literal##'+val;
 	default: throw 'unknown type in pp';
       }
     }
@@ -4685,14 +4713,13 @@ function pp(xx) {
 
 function disasm(Mod, ip) {
   var Code1 = Mod.code;
-  var ip, op, opargs, j, regs = ['','x','y','r'];
+  var ip, op, opargs, j;
   for (; ip < Code1.length;) {
-    opargs = Code1[ip]>>8;
     op = Code1[ip++]&255;
     debug1(ip-1+' '+OpcodeNames[op]+' ');
 
     for (j = 0; j < ArityTable[op]; j++, ip++) {
-      debug1(regs[(opargs>>j*2)&3]+pp(Code1[ip])+' ');
+      debug1(pp(Code1[ip])+' ');
     }
     debugln1('');
     if (op == 2) break;
