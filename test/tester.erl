@@ -1,10 +1,10 @@
 %#!/usr/bin/env escript
 %%! -sname server1 +A1 +K true -pa /home/svahne/git/sockjs-erlang/ebin /home/svahne/git/sockjs-erlang/deps/cowboy/ebin -input
 
--module(startme).
+-module(tester).
 -mode(compile).
 
--export([main/1, go/0]).
+-export([main/1, go/0, run/1, run/0]).
 -export([start_proxy/2]).
 -export([init/3, handle/2, terminate/2]).
 
@@ -34,9 +34,12 @@ go()->
 
     io:format("~n~p: Web server started, try http://localhost:~p/index.html~n"
               "~p can be reached through 'erl -sname remsh -remsh server1@myhost'~n"
-              , [node(), Port, node()]).
+              "run tests with e.g: tester:run([array_SUITE, random_SUITE]).~n",
+              [node(), Port, node()]).
 
 
+%% --------------------------------------------------------------------------
+%% Cowboy callbacks
 %% --------------------------------------------------------------------------
 
 init({_Any, http}, Req, []) ->
@@ -49,6 +52,7 @@ handle(Req, SockjsState) ->
   case cowboy_http_req:path(Req) of
     {File, Req1} when File =:= [<<"term">>,<<"term.js">>];
                   File =:= [<<"index.html">>];
+                  File =:= [<<"test_main.js">>];
                   File =:= [<<"browserl.js">>];
                   File =:= [<<"hapint">>,<<"hapint.es">>];
                   File =:= [<<"sockjs">>,<<"sockjs-0.2.min.js">>];
@@ -56,7 +60,7 @@ handle(Req, SockjsState) ->
                   File =:= [<<"beams">>,<<"start.boot">>];
                   File =:= [<<"beams">>,<<"beamfiles.tar">>];
                   File =:= [<<"jquery">>,<<"jquery-1.7.1.min.js">>] ->
-            {ok, Data} = file:read_file(filename:join(File)),
+            {ok, Data} = file:read_file(filename:join([<<"..">>]++File)),
             {ok, Req2} = cowboy_http_req:reply(200, 
                                                [{<<"Content-Type">>, "text/html"}], 
                                                Data, Req1),
@@ -74,6 +78,9 @@ handle(Req, SockjsState) ->
 
 
 %% --------------------------------------------------------------------------
+%% sockjs Distribution callbacks
+%% --------------------------------------------------------------------------
+%
 % We initiate connection with: {{97, myname}}
 % browser responds with: {{97, hisname}}
 % to which we reply with: {{98, proxypid}}
@@ -82,7 +89,7 @@ dist(Conn, {recv, Data}) ->
    Term = try binary_to_term(base64:decode(Data)) 
           catch _:_ -> Data
           end,
-   io:format("from browser: ~p ~n",[Term]),
+%   io:format("from browser: ~p ~n",[Term]),
    case Term of
      {2, Pid, Msg} -> Pid ! Msg;
      {6, {RegName, Node}, Msg} -> {RegName, Node} ! Msg; 
@@ -104,6 +111,8 @@ send(Msg, Conn) ->
    sockjs:send(base64:encode(term_to_binary(Msg)), Conn). 
 
 
+%% --------------------------------------------------------------------------
+%% Distribution proxy
 %% --------------------------------------------------------------------------
 
 -define(shutdown(Data), erlang:exit({?MODULE, ?LINE, Data})).
@@ -173,7 +182,7 @@ proxy_loop(Conn, Socket)->
               binary_to_term(Rest);
            _ -> ""
        end,   
-       io:format("from erts ~p~n",[{Control, Msg}]),
+%       io:format("from erts ~p~n",[{Control, Msg}]),
        sockjs:send(base64:encode(term_to_binary({Control, Msg})), Conn),
        proxy_loop(Conn, Socket);
     {tcp, Socket, []} ->
@@ -328,3 +337,17 @@ make_flags(OtherNode) ->
           ?DFLAG_EXTENDED_PIDS_PORTS bor
           ?DFLAG_EXTENDED_REFERENCES.
 
+
+%% --------------------------------------------------------------------------
+%% Functions for running common test
+%% --------------------------------------------------------------------------
+run() -> 
+   ct_master:run("browserl.spec", true, nodes(), []).
+
+run(Suites) ->
+   ct_master:run_test(hd(nodes()), 
+                      [{suite,Suites},
+                       {auto_compile, false}, 
+                       {basic_html, true}, 
+                       batch,
+                       {event_handler, master, logger}]).
