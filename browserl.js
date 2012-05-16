@@ -48,9 +48,22 @@ dbg:tpl(math, sum, dbg:fun2ms(fun(_) -> return_trace() end)).
 */
 
 
-var OpcodeNames = ['NOP','label/1','func_info/3','int_code_end/0','call/2','call_last/3','call_only/2','call_ext/2','call_ext_last/3','bif0/2','bif1/4','bif2/5','allocate/2','allocate_heap/3','allocate_zero/2','allocate_heap_zero/3','test_heap/2','init/1','deallocate/1','return/0','send/0','remove_message/0','timeout/0','loop_rec/2','loop_rec_end/1','wait/1','wait_timeout/2','m_plus/4','m_minus/4','m_times/4','m_div/4','int_div/4','int_rem/4','int_band/4','int_bor/4','int_bxor/4','int_bsl/4','int_bsr/4','int_bnot/3','is_lt/3','is_ge/3','is_eq/3','is_ne/3','is_eq_exact/3','is_ne_exact/3','is_integer/2','is_float/2','is_number/2','is_atom/2','is_pid/2','is_reference/2','is_port/2','is_nil/2','is_binary/2','is_constant/2','is_list/2','is_nonempty_list/2','is_tuple/2','test_arity/3','select_val/3','select_tuple_arity/3','jump/1','catch/2','catch_end/1','move/2','get_list/3','get_tuple_element/3','set_tuple_element/3','put_string/3','put_list/3','put_tuple/2','put/1','badmatch/1','if_end/0','case_end/1',
-'call_fun/1','make_fun/3','is_function/2','call_ext_only/2','bs_start_match/2','bs_get_integer/5','bs_get_float/5','bs_get_binary/5','bs_skip_bits/4','bs_test_tail/2','bs_save/1','bs_restore/1','bs_init/2','bs_final/2','bs_put_integer/5','bs_put_binary/5','bs_put_float/5','bs_put_string/2','bs_need_buf/1','fclearerror/0','fcheckerror/1','fmove/2','fconv/2','fadd/4','fsub/4','fmul/4','fdiv/4','fnegate/3','make_fun2/1','try/2','try_end/1','try_case/1','try_case_end/1','raise/2','bs_init2/6','bs_bits_to_bytes/3','bs_add/5','apply/1','apply_last/2','is_boolean/2','is_function2/3','bs_start_match2/5','bs_get_integer2/7','bs_get_float2/7','bs_get_binary2/7','bs_skip_bits2/5','bs_test_tail2/3','bs_save2/2','bs_restore2/2','gc_bif1/5','gc_bif2/6','bs_final2/2','bs_bits_to_bytes2/2','put_literal/2','is_bitstr/2','bs_context_to_binary/1','bs_test_unit/3','bs_match_string/4','bs_init_writable/0','bs_append/8','bs_private_append/6','trim/2','bs_init_bits/6','bs_get_utf8/5','bs_skip_utf8/4','bs_get_utf16/5','bs_skip_utf16/4',
-'bs_get_utf32/5','bs_skip_utf32/4','bs_utf8_size/3','bs_put_utf8/3','bs_utf16_size/3','bs_put_utf16/3','bs_put_utf32/3','on_load/0','recv_mark/1','recv_set/1','gc_bif3/7'];
+var OpcodeNames = ['NOP','label/1','func_info/3','int_code_end/0','call/2','call_last/3','call_only/2','call_ext/2','call_ext_last/3','bif0/2','bif1/4',
+'bif2/5','allocate/2','allocate_heap/3','allocate_zero/2','allocate_heap_zero/3','test_heap/2','init/1','deallocate/1','return/0','send/0',
+'remove_message/0','timeout/0','loop_rec/2','loop_rec_end/1','wait/1','wait_timeout/2','m_plus/4','m_minus/4','m_times/4','m_div/4','int_div/4',
+'int_rem/4','int_band/4','int_bor/4','int_bxor/4','int_bsl/4','int_bsr/4','int_bnot/3','is_lt/3','is_ge/3','is_eq/3','is_ne/3','is_eq_exact/3',
+'is_ne_exact/3','is_integer/2','is_float/2','is_number/2','is_atom/2','is_pid/2','is_reference/2','is_port/2','is_nil/2','is_binary/2','is_constant/2',
+'is_list/2','is_nonempty_list/2','is_tuple/2','test_arity/3','select_val/3','select_tuple_arity/3','jump/1','catch/2','catch_end/1','move/2','get_list/3',
+'get_tuple_element/3','set_tuple_element/3','put_string/3','put_list/3','put_tuple/2','put/1','badmatch/1','if_end/0','case_end/1',
+'call_fun/1','make_fun/3','is_function/2','call_ext_only/2','bs_start_match/2','bs_get_integer/5','bs_get_float/5','bs_get_binary/5',
+'bs_skip_bits/4','bs_test_tail/2','bs_save/1','bs_restore/1','bs_init/2','bs_final/2','bs_put_integer/5','bs_put_binary/5','bs_put_float/5',
+'bs_put_string/2','bs_need_buf/1','fclearerror/0','fcheckerror/1','fmove/2','fconv/2','fadd/4','fsub/4','fmul/4','fdiv/4','fnegate/3','make_fun2/1',
+'try/2','try_end/1','try_case/1','try_case_end/1','raise/2','bs_init2/6','bs_bits_to_bytes/3','bs_add/5','apply/1','apply_last/2','is_boolean/2',
+'is_function2/3','bs_start_match2/5','bs_get_integer2/7','bs_get_float2/7','bs_get_binary2/7','bs_skip_bits2/5','bs_test_tail2/3','bs_save2/2',
+'bs_restore2/2','gc_bif1/5','gc_bif2/6','bs_final2/2','bs_bits_to_bytes2/2','put_literal/2','is_bitstr/2','bs_context_to_binary/1','bs_test_unit/3',
+'bs_match_string/4','bs_init_writable/0','bs_append/8','bs_private_append/6','trim/2','bs_init_bits/6','bs_get_utf8/5','bs_skip_utf8/4','bs_get_utf16/5',
+'bs_skip_utf16/4','bs_get_utf32/5','bs_skip_utf32/4','bs_utf8_size/3','bs_put_utf8/3','bs_utf16_size/3','bs_put_utf16/3','bs_put_utf32/3',
+'on_load/0','recv_mark/1','recv_set/1','gc_bif3/7'];
 
 var ArityTable = [0,1,3,0,2,3,2,2,3,2,4,5,2,3,2,3,2,1,1,0,0,0,0,2,1,1,2,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,1,2,1,2,3,3,3,3,3,2,1,1,0,1,1,3,2,2,2,5,5,5,4,2,1,1,2,2,5,5,5,2,1,0,1,2,2,4,4,4,4,3,1,2,1,1,1,2,6,3,5,1,2,2,3,5,7,7,7,5,3,2,2,5,6,2,2,2,2,1,3,4,0,8,6,2,6,5,4,5,4,5,4,3,3,3,3,3,0,1,1,7];
 
@@ -166,6 +179,7 @@ var am_date = loaderStrToAtom('date');
 var am_universaltime_to_localtime = loaderStrToAtom('universaltime_to_localtime');
 var am_localtime = loaderStrToAtom('localtime');
 var am_time = loaderStrToAtom('time');
+var am_universaltime_to_localtime = loaderStrToAtom('universaltime_to_localtime');
 var am_statistics = loaderStrToAtom('statistics');
 var am_div = loaderStrToAtom('div');
 var am_rem = loaderStrToAtom('rem');
@@ -212,7 +226,6 @@ var am_port_connect = loaderStrToAtom('port_connect');
 var am_port_close = loaderStrToAtom('port_close');
 var am_monitor = loaderStrToAtom('monitor');
 var am_demonitor = loaderStrToAtom('demonitor');
-var am_demonitor = loaderStrToAtom('demonitor');
 var am_is_process_alive = loaderStrToAtom('is_process_alive');
 var am_link = loaderStrToAtom('link');
 var am_unlink = loaderStrToAtom('unlink');
@@ -220,8 +233,6 @@ var am_display = loaderStrToAtom('display');
 var am_bump_reductions = loaderStrToAtom('bump_reductions');
 var am_get_stacktrace = loaderStrToAtom('get_stacktrace');
 var am_exit = loaderStrToAtom('exit');
-var am_exit = loaderStrToAtom('exit');
-var am_error = loaderStrToAtom('error');
 var am_error = loaderStrToAtom('error');
 var am_throw = loaderStrToAtom('throw');
 var am_raise = loaderStrToAtom('raise');
@@ -384,17 +395,42 @@ String.prototype.subarray = function(start, end) {
   return s;
 }
 
-//BUG does not handle normalized floats
-function getFloat(a, pos) {
+//Not using Float64Array since typed arrays are not available on all targets
+function arrayToFloat(a, pos) {
   var sign = a.getInt32(pos) >> 31;
-  var exponent = ((a.getInt32(pos) >> 20) & ((1 << 11)-1)) - 1023; 
+  var exponent = ((a.getInt32(pos) >> 20) & ((1 << 11)-1)); 
   var fractionUpper = a.getInt32(pos) & ((1 << 20)-1);	
   var fractionLower = a.getInt32(pos+4);
   var fraction = fractionUpper*0x100000000 + Math.abs(fractionLower);
-  var num = Math.pow(2, exponent)*(1+Math.abs(fraction/4503599627370496)); //1 bsl 52
+  var num;
+  if (exponent == 0)
+    num = Math.pow(2, exponent-1023)*(Math.abs(fraction/(4503599627370496/2))); //1 bsl 51
+  else 
+    num = Math.pow(2, exponent-1023)*(1+Math.abs(fraction/4503599627370496)); //1 bsl 52
   if (sign == -1) num = -num;
-//  debugln1('getFloat:'+sign+':'+exponent+':'+fraction+':'+num);
+//  debugln1('arrayToFloat:'+sign+':'+exponent+':'+fraction+':'+num);
   return num;
+}
+
+function floatToArray(n) {
+  var s = (n < 0) ? 1 : 0;
+  var e = 0, m = 0;
+  n = Math.abs(n);
+  if (n != 0) {
+    while (n >= 2) {
+      e++; 
+      n /= 2;
+    }
+    while (n < 1) {
+      e--;
+      n *= 2;
+    } 
+  } else { e = -1023; n = 1;} //TODO handle normalised numbers
+//  console.log("exponent: "+(e+1023)+" mantissa: "+(n-1)*0x10000000000000); //1 bsl 52
+  var lower32bits = (n-1)*4503599627370496 & 0xffffffff; //shift mantissa 52 bits and mask out lowest 32
+  var higher32bits = ((n-1)*Math.pow(2,20)) & 0xfffff | (Math.abs(e+1023) << 20) | (s << 31);
+  return [higher32bits >>> 24, (higher32bits >>> 16) & 0xff, (higher32bits >>> 8) & 0xff, higher32bits & 0xff, 
+    lower32bits >>> 24, (lower32bits >>> 16) & 0xff, (lower32bits >>> 8) & 0xff, lower32bits & 0xff];
 }
 
 function arrayToTerm(a, loading){
@@ -405,11 +441,11 @@ function arrayToTerm(a, loading){
   function decode() {
     switch(a[pos++]) {
       case 70: //float constant?
-        var num = getFloat(a, pos);
+        var num = arrayToFloat(a, pos);
 	pos += 8; 
 	return {type:am_float, value:num}; 
 //      case 77: //bitstring (used in erl_eval_SUITE, and many more)
-//        var num = getFloat(a, pos);
+//        var num = arrayToFloat(a, pos);
 //	pos += 8; 
 //	return {type:am_float, value:num}; 
       case 97: //small int
@@ -463,6 +499,8 @@ function arrayToTerm(a, loading){
 	pos += 4 + len; 
 	return a.getString(pos - len, len);
 //      case 110: //small big (used in dets_SUITE, ets_SUITE)
+//      case 112: //fun e.g. fun()-> ok end
+//      case 113: //fun e.g. fun io:format/2
       case 114: //external reference
 	var len = bytesToInteger(a, pos, 2)*4;
 	pos += 2;
@@ -500,8 +538,8 @@ function arrayToTerm(a, loading){
   }
 }
 
-function termToBinary(a){
-  return termToStrInternal(a, String.fromCharCode(131));
+function termToBinary(term){
+  return termToStrInternal(term, String.fromCharCode(131));
   
   function termToStrInternal(a, res){
     if (is_atom(a)) {
@@ -517,11 +555,17 @@ function termToBinary(a){
       res += temp;
     } else if (is_nonempty_list(a)) {
       var len = listLen(a);
+      if (len == undefined) len = listLenImproperList(a);
       res += String.fromCharCode(108);
       res += intToStr(len, 4);
-      while (a != 2 << 27) { //TODO handle improper lists
+      while (a != 2 << 27) { 
 	res += termToStrInternal(a.value, "");
 	a = a.next;
+	if (a.value == undefined) {
+	  //improper list
+	  res += termToStrInternal(a, "");
+	  return res;
+	}
       }
       res += String.fromCharCode(106);
     } else if (is_list(a)) {
@@ -534,6 +578,9 @@ function termToBinary(a){
 	res += String.fromCharCode(98);
 	res += intToStr(a, 4);
       } else if (is_bignum(a)) { //HACK
+       debugln1("WARNING: encoding bignum not implemented");
+      } else if (a < 0) { //HACK
+       debugln1("WARNING: encoding negative numbers not implemented");
       } else throw "unknown int in term_to_binary";
     } else if (is_pid(a)) {
       res += String.fromCharCode(103);
@@ -564,9 +611,11 @@ function termToBinary(a){
 	res += intToStr(a.value % 0xFFFFFFFF, 4);	//id
       }
     } else if (is_fun(a)) { //HACK
+       debugln1("WARNING: encoding fun not implemented");
     } else if (is_binary(a)) { //HACK
+       debugln1("WARNING: encoding binary not implemented");
     } else if (is_float(a)) { //HACK
-      
+       debugln1("WARNING: encoding float not implemented");      
     } else throw "unknown type in term_to_binary";
     return res;
   }
@@ -877,7 +926,7 @@ function loadFiles(files, mod, fun, args) {
 	switch(b >> 4) {
 	case 0: //float
 	  pos += 8;
-	  Code2.push({type:am_float, value:getFloat(a, pos-8)});
+	  Code2.push({type:am_float, value:arrayToFloat(a, pos-8)});
 	  return (Code2.length-1) | (6 << 27);	  
 
 	case 1: //select list
@@ -1307,6 +1356,7 @@ function lt(s1, s2) {
   //only one can be a float //TODO handle bignums
 //  if (s1.type == am_float && is_integer(s2)) return s1.value < s2; 
 //  else if (s2.type == am_float && is_integer(s1)) return s1 < s2.value; 
+  if (is_list(s1) && is_list(s2)) { return !listGe(s1,s2); }
 
   //number < atom < reference < fun < port < pid < tuple < list < bitstring
   if (is_number(s1)) s1 = 1;
@@ -1491,7 +1541,16 @@ function is_float(arg1) {
   return (arg1.type==am_float);
 }
 function is_binary(arg1) {
-  return (typeof arg1 == 'string' );
+  return (typeof arg1 == 'string');
+}
+function is_bitstring(arg1) {
+  return (is_binary(arg1) || arg1.type == 'bitstring');
+}
+function is_binary_matchspec(arg1) {
+  return (arg1.type == 'matchspec_binary');
+}
+function is_bitstring_matchspec(arg1) {
+  return (arg1.type == 'matchspec_bitstring');
 }
 function is_atom(arg1) {
   return ((arg1>>27) == 2 && arg1 != 2<<27 && !is_tuple(arg1));
@@ -1737,6 +1796,19 @@ function bif(c_p, m, f, a, x) {
 	  return [[D.getFullYear(), D.getMonth()+1, D.getDate()],
 	  [D.getHours(), D.getMinutes(), D.getSeconds()]];
 
+	case am_universaltime_to_localtime:
+	  var D = new Date();
+	  if (a==1) {
+	    D.setUTCFullYear(x[0][0][0]);
+	    D.setUTCMonth(x[0][0][1]-1);
+	    D.setUTCDate(x[0][0][2]);
+	    D.setUTCHours(x[0][1][0]);
+	    D.setUTCMinutes(x[0][1][1]);
+	    D.setUTCSeconds(x[0][1][2]);
+	  } else break;
+	  return [[D.getFullYear(), D.getMonth()+1, D.getDate()],
+	  [D.getHours(), D.getMinutes(), D.getSeconds()]];
+
 	case am_time:
 	  if (a!=0) break;
 	  var D = new Date();
@@ -1934,8 +2006,9 @@ function bif(c_p, m, f, a, x) {
 
 	case am_unregister: 
 	  if (a!=1) break;
-	  //TODO
-	  if (!is_pid(x[0])) return badarg_stacktrace(c_p, x[0]);
+	  if (!is_atom(x[0])) return badarg_stacktrace(c_p, x[0]);
+	  delete c_p.regname;
+	  delete reg_procs[x[0]];
 	  return am_true;
       
 	case am_whereis:
@@ -2552,9 +2625,12 @@ function bif(c_p, m, f, a, x) {
 				      ref:{type: 'ref', value:uniqueRef}});
 	      c_p.iam_monitoring.push({pid:{type:am_pid, value:mpid.name}, 
 				      ref:{type: 'ref', value:uniqueRef}});
-	    }
+	    } else erlangSend({type:am_pid, value:c_p.name}, 
+		       [strToAtom('DOWN'), {type: 'ref', value:uniqueRef},
+		       x[0], x[1], strToAtom('noproc')],[])
+	    
 	    return {type: 'ref', value:uniqueRef++};
-	  } else throw 'unknown monitor type'; 
+	  } else return badarg_stacktrace(c_p, x[0]); 
 	  
 	case am_demonitor: 
 	  if (a!=1 && a!=2) break;
@@ -2626,20 +2702,13 @@ function bif(c_p, m, f, a, x) {
 	  if (a==1) {
 	    //    debugln1('exit: '+ppx(x)+':'+c_p.stacktrace);
 	    c_p.fault = true;
-	    c_p.stacktrace = false; //Why?
+	    c_p.stacktrace = false; 
 	    c_p.fault_class = strToAtom('exit');
 	    return x[0]; 
 	  } else if (a==2) {
-	    //    debugln1(c_p.name+' exit/2: '+ppx(x)+':'+c_p.stacktrace);
-	    if (procs[x[0].value] != undefined) { 
-	      procs[x[0].value].fault = true;
-	      procs[x[0].value].stacktrace = false; //Why?
-	      procs[x[0].value].fault_class = strToAtom('exit');
-	      procs[x[0].value].state = 'runnable'
-	      procs[x[0].value].r = x[1];
-	      run_queue.push(procs[x[0].value]);
-	    }
-	    return am_true; 
+	        debugln1(c_p.name+' exit/2: '+ppx(x)+':'+c_p.stacktrace);
+	    erlangExit(c_p, x[0], x[1]);
+            return am_true; 
 	  } else break;
 	  
 	case am_error:
@@ -2812,6 +2881,15 @@ function bif(c_p, m, f, a, x) {
 	      return ets_first(x[0]);
 	    case am_delete:
 	      return ets_delete_1(x[0]);
+	    case am_info:
+	      if (ets_tables[x[0]] == undefined) return strToAtom("undefined"); 
+	      return arrayToList([
+	        [strToAtom('name'), ets_tables[x[0]].value],
+	        [strToAtom('type'), ets_tables[x[0]].ets_type],
+	        [strToAtom('size'), ets_tables[x[0]].slots.length],
+	        [strToAtom('memory'), 0],
+	        [strToAtom('owner'), ets_tables[x[0]].owner],
+	        [strToAtom('protection'), ets_tables[x[0]].protection]]);
 	  }
 	  break;
 	case 2:
@@ -2850,9 +2928,10 @@ function bif(c_p, m, f, a, x) {
 	    case am_info:
 	      if (x[1]==strToAtom('name')) return ets_tables[x[0]].value;
 	      if (x[1]==strToAtom('type')) return ets_tables[x[0]].ets_type;
-	      if (x[1]==strToAtom('size')) return ets_tables[x[0]].size;
+	      if (x[1]==strToAtom('size')) return ets_tables[x[0]].slots.length;
 	      if (x[1]==strToAtom('memory')) return 0;
 	      if (x[1]==strToAtom('owner')) return ets_tables[x[0]].owner;
+	      if (x[1]==strToAtom('protection')) return ets_tables[x[0]].protection;
 	      throw 'ets:info '+ppx(x);
 	  
 	    case am_match: 
@@ -3237,9 +3316,10 @@ function erlangSend(to, msg, options) { //TODO handle options
 //    if (to.subtype == 'pseudoPid') return sendToDOM(to, msg);
    
     if (receiver != undefined) {
-//      debugln1(': Sending '+pp(msg)+' to '+pp(receiver.name)+' '+run_queue);
+//      debugln1(': Sending '+pp(msg)+' to '+pp(to)+'==='+pp(receiver.name)+' '+run_queue);
       receiver.msgs.push(msg);
-      if (receiver.state == 'waiting') receiver.state = 'runnable';
+//      if (receiver.state == 'waiting') receiver.state = 'runnable';
+      receiver.state = 'runnable';
       run_queue.push(receiver);
     } else {
 //      debugln1(': Sending external '+pp(msg)+" to "+pp(to));
@@ -3358,6 +3438,7 @@ function atomToModule(atom) {
   return Modules[atom];
 }
 
+//WARNING will return undefined for improper lists (by design)!
 function listLen(list) { 
   var len = 0;
   if (list == 2<<27) return 0;
@@ -3365,6 +3446,17 @@ function listLen(list) {
     len++;
     list = list.next;
     if (list == undefined) return undefined;
+  }
+  return len;
+}
+
+function listLenImproperList(list) { 
+  var len = 0;
+  if (list == 2<<27) return 0;
+  while (list != 2 << 27) {
+    list = list.next;
+    if (list == undefined) return len;
+    len++;
   }
   return len;
 }
@@ -3449,7 +3541,8 @@ function mkPid(id) {
   return {type:am_pid, value:id};
 }
 
-//ETS functions, not really supported for now
+// WARNING: ETS functions are not really supported for now
+// The following functions are just a hack to get the node up
 
 function ets_new(c_p, name, opts) {
   ets_counter++;
@@ -3458,7 +3551,7 @@ function ets_new(c_p, name, opts) {
   if (name == strToAtom('ct_suite_data')) keypos = 1;
   ets_tables[nameOrNumber] = {type:'ets_table', value:name, owner:mkPid(c_p.name), 
                               opts: opts, contents:{}, slots:[], keypos:keypos,
-			      ets_type:strToAtom('set'), size:0};
+			      ets_type:strToAtom('set'), size:0, protection:strToAtom("public")};
 //  debugln1('ets_new:'+pp(name)+'::::'+pp(opts));
   return name;
 }
@@ -3473,6 +3566,7 @@ function ets_delete_2(name, key) {
 //  debugln1('ets_delete2:'+pp(name)+'::::'+pp(key));
   var nameOrNumber = name; //TODO
   delete ets_tables[nameOrNumber].contents[key];
+  ets_tables[nameOrNumber].size--;
   //TODO naive implementation of slots
   for (var i = 0; i < ets_tables[nameOrNumber].slots.length; i++) {
     if (eq_exact(ets_tables[nameOrNumber].slots[i], key)) 
@@ -3486,6 +3580,7 @@ function ets_delete_object(c_p, name, object) {
   var nameOrNumber = name; //TODO
   var key = object[keypos];
   delete ets_tables[nameOrNumber].contents[key];
+  ets_tables[name].size--;
   //TODO naive implementation of slots
   for (var i = 0; i < ets_tables[nameOrNumber].slots.length; i++) {
     if (eq_exact(ets_tables[nameOrNumber].slots[i], key)) 
@@ -3501,9 +3596,21 @@ function ets_select_delete(name, opts) {
   return 0;
 }
 
+//TODO
+//e.g. opts == [{{_,_,$1,},[{==,$1,<<pid##102>>,},],[$_,],},]
 function ets_select(name, opts) {
-//  debugln1('TODO ets_select:'+pp(name)+'::::'+pp(opts));
+  debugln1('TODO ets_select:'+pp(name)+'::::'+pp(opts));
   var nameOrNumber = name; //TODO
+  /*
+  var head = opts[0];
+  var guards = listToArray(opts[1]);
+  var results = listToArray(opts[2]);
+  if (guards[0] == strToAtom('==') && guards[1] == strToAtom('$1')) {
+    if (head[0] == strToAtom('_') && head[0] == strToAtom('_') && head[0] == strToAtom('$1')) {
+      
+    }
+  }
+  */
   return 2<<27;
 }
 
@@ -3514,7 +3621,7 @@ function ets_insert(table, objects) {
   for (var i = 0; i < all.length; i++) {
     var object = all[i], key;
 //    debugln1('ets_insert:'+keypos+":"+pp(object[keypos])+" "+pp(table)+'::::'+pp(object));
-    if (is_list(object[keypos])) key = listToStr(object[keypos]);
+    if (is_list(object[keypos])) key = termToBinary(object[keypos]);
     else key = object[keypos];
     ets_tables[table].contents[key]=object;
     ets_tables[table].slots.push(object[keypos]);
@@ -3526,7 +3633,7 @@ function ets_insert(table, objects) {
 function ets_lookup(table, key) {
   var result;
   
-  if (is_list(key)) key = listToStr(key);
+  if (is_list(key)) key = termToBinary(key);
   
   //Dirty HACK to avoid compiling when running tests
   if (table == strToAtom('ac_tab') && 
@@ -3614,7 +3721,7 @@ function functionToIp(mod, fun, ar) {
 }
 
 function erl_idle() {
-  if (timer_queue.length > 0) {
+/*  if (timer_queue.length > 0) {
     if (timer_queue[0][0] < Date.now()) {
       var c_p = timer_queue[0][1];
       timer_queue.shift();
@@ -3623,7 +3730,7 @@ function erl_idle() {
 	run_queue.push(c_p);
       }
     }
-  }
+  } */
   if (run_queue.length > 0) erl_exec();
   else setTimeout(erl_idle, 100);
 }
@@ -3643,8 +3750,7 @@ function exec_port(port) {
   port.state = 'waiting';
 }
 
-
-function handle_fault(c_p, r, mod, ip) {
+function notifyAndDie(c_p, r, mod, ip) {
   /*
                     debugln1('*** Fault '+pp(c_p.fault_class)+' r = '+pp(r));
     		    debugln1('*** Process '+c_p.name+' died with reason '+pp(r));
@@ -3652,26 +3758,31 @@ function handle_fault(c_p, r, mod, ip) {
     		    if (mod != undefined) debugln1("*** at:"+mod.name+":"+ipToFunction(mod, ip)+":"+pp(stacktrace(c_p)));
 //    		    */
     var j;
-    for (j=0; j < c_p.monitoring_me.length; j++) 
+    for (j=0; j < c_p.monitoring_me.length; j++) {
       erlangSend(c_p.monitoring_me[j].pid, 
 		 [strToAtom('DOWN'), c_p.monitoring_me[j].ref, 
 		 strToAtom('process'), 
 		 {type:am_pid, value:c_p.name}, r],[]);
-      for (j=0; j < c_p.links.length; j++) 
-	if (r == strToAtom('kill'))
-	  erlangExit(c_p, c_p.links[j], r);
-	else if (procs[c_p.links[j].value] != undefined &&
-	  procs[c_p.links[j].value].trap_exit != am_true)
-	  erlangExit(c_p, c_p.links[j], r);
-	    else erlangSend(c_p.links[j], 
-	      [strToAtom('EXIT'), 
-			    {type:am_pid, value:c_p.name}, r],[]);
-	    delete procs[c_p.name];
-	    //TODO more cleanup, reg_procs, monitors, links, ets tables, etc
+    }
+    for (j=0; j < c_p.links.length; j++) {
+//      if (r == strToAtom('kill'))
+//	erlangExit(c_p, c_p.links[j], strToAtom('killed'));
+//      else 
+      var target = procs[c_p.links[j].value];
+      if (target != undefined && target.trap_exit != am_true)
+	erlangExit(c_p, c_p.links[j], r);
+      else {
+	if (r == strToAtom('kill')) r = strToAtom('killed'); 
+	erlangSend(c_p.links[j], [strToAtom('EXIT'), 
+		      {type:am_pid, value:c_p.name}, r],[]);
+      }
+    }
+    delete procs[c_p.name];
+    //TODO more cleanup, reg_procs, monitors, links, ets tables, etc
 }
 
     
-var run_queue = [], timer_queue = [], hproc = 0, ets_counter = 0, ets_tables = {};
+var run_queue = [], hproc = 0, ets_counter = 0, ets_tables = {};
 var procs = [], reg_procs = {}, uniqueRef = 0, sockjs;
 
 function run(mod, fun, args, files) {
@@ -3756,7 +3867,7 @@ function erl_exec() {
 	debugln1('*** WARNING: undefined module: '+pp(orig_mod))
       } else {
 
-///*
+/*
 	if (debug || name == debug_pid){
 	  debugln1("");
 	  x[0]=r; debugln1(name+':ExtCall to ' + mod.name + ':'+ 
@@ -3790,14 +3901,12 @@ function erl_exec() {
 	y.length = c.y;
 	c_p.cp.length = c.cp_len;
 	if (c_p.fault_class != strToAtom('throw'))
-	  if (c_p.stacktrace)
-	    r = [strToAtom('EXIT'), [r, c_p.stacktrace]];
-	  else
-	    r = [strToAtom('EXIT'), r];
+	  if (c_p.stacktrace) r = [strToAtom('EXIT'), [r, c_p.stacktrace]];
+	  else r = [strToAtom('EXIT'), r];
 	  c_p.fault = false;
 	continue new_mod;
       } else {
-	handle_fault(c_p, r, mod, ip);
+	notifyAndDie(c_p, r, mod, ip);
 	continue new_proc;
       }
 
@@ -3853,28 +3962,15 @@ function erl_exec() {
 	   
 	case 19:  // return/0 
 	  ip = c_p.cp.pop();
-	  if (ip == undefined) { //TODO optimize and break out as function
-//	    debugln1('*** Process '+c_p.name+' died with reason normal'+pp(c_p.links));
-	    for (j=0; j < c_p.monitoring_me.length; j++) 
-	      erlangSend(c_p.monitoring_me[j].pid, 
-			 [strToAtom('DOWN'), c_p.monitoring_me[j].ref, 
-			  strToAtom('process'), 
-			  {type:am_pid, value:c_p.name}, strToAtom('normal')],[]);
-	    for (j=0; j < c_p.links.length; j++) 
-	      if ( (procs[c_p.links[j].value] && procs[c_p.links[j].value].trap_exit == am_true) 
-		|| is_external_pid(c_p.links[j]))
-		erlangSend(c_p.links[j], 
-			   [strToAtom('EXIT'), 
-			   {type:am_pid, value:c_p.name}, strToAtom('normal')],[]);
-            delete procs[c_p.name];
+	  if (ip == undefined) {
+            notifyAndDie(c_p, strToAtom('normal'), mod, ip);
 	    continue new_proc;
 	  }
 	  mod = c_p.cp.pop();
 	  code = mod.code;
 	  imports = mod.imports;
 	  strings = mod.string;
-	  if (debug || name == debug_pid ) 
-	    debugln1('return to '+ipToFunction(mod, ip)+' r='+pp(r));
+//	  if (debug || name == debug_pid ) debugln1('return to '+ipToFunction(mod, ip)+' r='+pp(r));
 	  continue;
 
 	case 65: // get_list/3  Src  Head  Tail
@@ -3895,7 +3991,7 @@ function erl_exec() {
 	case 6:   // call_only/2 (Ar) Func 
 	  ip = code[ip + 1];
 	  reds--;
-///*	  
+/*	  
           if(debug || name == debug_pid) {
 	    debugln1('');
 	    debugln1(name+':call '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
@@ -3933,7 +4029,7 @@ function erl_exec() {
 	  y.length -= code[ip + 2];
 	  ip = code[ip + 1];
 	  reds--;
-///*	  
+/*	  
 	  if (debug || name == debug_pid) {
 	    debugln1(''); 
 	    debugln1(name+':call last '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
@@ -4102,6 +4198,10 @@ function erl_exec() {
 	  ip = code[ip];
 	  continue;
 
+	case 129: //'is_bitstr/2'
+	  if (is_bitstring(g(code[ip+1]))) break;
+	  ip = code[ip];
+	  continue;
 
 	case 114: // is_boolean/2 Fail Number
 	  if (is_boolean(g(code[ip+1]))) break;
@@ -4263,28 +4363,20 @@ function erl_exec() {
 	  ip = code[ip];
 	  continue;
 	  
-	case 24: // loop_rec_end/1 Fail 
+	case 24: // loop_rec_end/1 Fail (Fail = more messages to check)
           c_p.cmsg += 1; 
 	  if (c_p.cmsg > c_p.msgs.length) { c_p.cmsg = 0; break; } 
           
           ip = code[ip];
 	  continue;
 	  
-	case 26: // wait_timeout/2 Label S2=y
+	case 26: // wait_timeout/2 Label Timeout
           s2 = g(code[ip+1]);
-	  if (s2 < 1) { //Timeout and schedule another process
-	    c_p.y = y;
-	    c_p.r = r;
-	    c_p.ip = ip+2; //next instruction, timeout/0
-	    c_p.mod = mod;
-	    if (c_p.state == 'runnable') run_queue.push(c_p);
-	    continue new_proc;
-	  } 
-	  if (s2!=strToAtom('infinity')) {
-	    c_p.timeout_ip = ip+2; //next instruction
-	    c_p.timeout_mod = mod.name; //for debug
-	    timer_queue.push([Date.now()+Number(s2), c_p]);
-	    timer_queue.sort(); //TODO use better data structure to avoid sort
+	  if (s2 == 0) break;
+	  if (s2!=strToAtom('infinity') && ! c_p.timer_ref) {
+	    c_p.timer_ref = createTimeout(s2, c_p.name, ip+2);
+//	    console.log("---"+c_p.name+": created timeout "+c_p.timer_ref+", timeout="+s2+", ip="+(ip+2));
+
 	  }
 	  //Fall through
 	case 25: // wait/1 Label
@@ -4293,15 +4385,22 @@ function erl_exec() {
 	  c_p.ip = code[ip];
 	  c_p.mod = mod;   
           c_p.state = 'waiting';
-	  if (c_p.state == 'runnable') run_queue.push(c_p);
 	  continue new_proc;
 
-	case 22: // timeout/0 
-          c_p.timeout_ip = -1;
+	case 22: // timeout/0
+          if (c_p.timer_ref) { 
+//	    console.log("---"+c_p.name+":clearing "+c_p.timer_ref);
+            clearTimeout(c_p.timer_ref);
+	    delete c_p.timer_ref;
+	  }
           break;
 
 	case 21: // remove_message/0
-          c_p.timeout_ip = -1; //cancel timeout	  
+          if (c_p.timer_ref) { 
+//	    console.log("---"+c_p.name+":removing message and clearing "+c_p.timer_ref);
+	    clearTimeout(c_p.timer_ref);
+	    delete c_p.timer_ref;
+	  }
           c_p.msgs.splice(c_p.cmsg,1);
 	  c_p.cmsg = 0;
 	  break;
@@ -4364,12 +4463,17 @@ function erl_exec() {
            throw 'TODO: fnegate: '+ppx(x);
 
 	   
-	  // Bitstrings
+	  // Binaries and Bitstrings
+	  // A binary always contains a "complete number of bytes" [as per the documentation]
+	  // Binaries are a subset of bitstrings
+	   
 	case 116: // bs_start_match2/5 Fail Src Live Max/Slots Ms
           s1 = g(code[ip+1]);
-          if (is_binary(s1)) {
-	    s(code[ip+4], {type:'matchspec', bin: s1, offs: 0 });
+          if (is_binary(s1)) { // A special case of bitstring
+	    s(code[ip+4], {type:'matchspec_binary', bin: s1, offs: 0, len: s1.length*8 });
 	    break;
+	  } else if (is_bitstring(s1)) {
+	    s(code[ip+4], {type:'matchspec_bitstring', bin: s1, offs: 0, len: s1.length*8 }); //TODO
 	  }
 	  ip = code[ip];
           continue;
@@ -4377,23 +4481,28 @@ function erl_exec() {
 	case 121: // bs_test_tail2/3 Fail Ms Len
           var ms = g(code[ip+1]);
 	  var len = code[ip+2];
-          if (ms.offs == ms.bin.length*8-len) break;
+          if (ms.offs == ms.len-len) break;
 	  ip=code[ip]; 
 	  continue;
 
 	case 132: // bs_match_string/4 Fail Ms=x Bits Offs
-	  var bytes = div(g(code[ip+2])+1,8);
+	  var bytes = div(g(code[ip+2])+1,8); //TODO Why +1?
 	  var ms = g(code[ip+1]);
-	  s1 = strings.substr(code[ip+3],bytes);
-	  s2 = ms.bin.substr(div(ms.offs,8), bytes);
-	  g(code[ip+1]).offs += bytes*8;
-	  if (s1==s2) break;
-	  ip = code[ip];
-	  continue;
+	  if (is_binary_matchspec(ms)) {
+	    s1 = strings.substr(code[ip+3],bytes);
+	    s2 = ms.bin.substr(div(ms.offs,8), bytes);
+	    g(code[ip+1]).offs += bytes*8;
+	    if (s1==s2) break;
+	    ip = code[ip];
+	    continue;
+	  } else if (is_bitstring_matchspec(ms)) {
+	    // I do not think this should work for bitstrings...
+	    throw "Not implemented for bitstrings!";
+	  }
 
         case 138: //bs_get_utf8/5 //HACK
           var ms = g(code[ip+1]);
-	  if (ms.offs <= ms.bin.length*8) {
+	  if (ms.offs <= ms.len) {
 	    s(code[ip+4], ms.bin[div(ms.offs,8)]);
 	    g(code[ip+1]).offs += 8;
 	    break;
@@ -4405,13 +4514,15 @@ function erl_exec() {
           var ms = g(code[ip+1]);
           var sz = g(code[ip+2]);
           var u = g(code[ip+3]);
-	  if (sz==strToAtom('all')) ms.offs = ms.bin.length*8;
-	  else ms.offs += sz*u;
+	  if (sz==strToAtom('all')) ms.offs = ms.len;
+	  else if (ms.offs + sz*u > ms.len) {
+	    ip = code[ip];
+	    continue;
+	  }
+	  ms.offs += sz*u;
 	  break;
-	  //TODO fail case?
-//	  ip = code[ip];
-//	  continue;
-	  
+	
+	  //TODO: bs_get_integer2/7 requires some careful thinking...
 	case 117: // bs_get_integer2/7 Fail Ms=x Live Size Unit Flags Dst=x
          var bits = g(code[ip+3])*g(code[ip+4])	 
 	 var bytes = div(bits,8);
@@ -4430,12 +4541,24 @@ function erl_exec() {
 
 	case 119: // bs_get_binary2/7 Fail Ms=x Live Size Unit Flags Dst=x
          var ms = g(code[ip+1]);
-	 s(code[ip+6], ms.bin.substr(div(ms.offs,8))); //until end of string
+         if (is_bitstring_matchspec(ms)) {
+	    // I do not think this should work for bitstrings...
+	    throw "Not implemented for bitstrings!";
+	 }
+	 ms.offs = ms.len; //TODO until end of string for now
+	 s(code[ip+6], ms.bin.substr(div(ms.offs,8))); 
          break;
+	 //TODO fail case: offs + size*unit > len
 
-	 //Creating binaries
+	case 131: 'bs_test_unit/3'
+	  var ms = g(code[ip+1]);
+	  if ((ms.len - ms.offs) % code[ip+2] == 0) break;
+	  ip = code[ip];
+	  continue;
+	 
+	 //Creating binaries and bitstrings
 
-	case 111: // bs_add/5 Fail S1=#units S2bits Unit Dst
+	case 111: // bs_add/5 Fail S1=#units S2='extra bits'? Unit Dst
          s1 = g(code[ip+1]);	   
          s2 = g(code[ip+2]);
          var unit = g(code[ip+3]);
@@ -4485,7 +4608,8 @@ function erl_exec() {
 
 	case 91: // bs_put_float/5 Fail Sz Unit Flags Src
 	  var bits = g(code[ip+1])*g(code[ip+2]);
-	  bs_str += '\@\Y\0\0\0\0\0\0'; //HACK = 100.0
+	  var a = floatToArray(g(code[ip+4]).value);
+	  for (var i = 0; i < a.length; i++) bs_str+= String.fromCharCode(a[i]);
 	  bs_size -= bits;
 	  if (bs_size <= 0) s(bs_dst, bs_str);
 	  break;
@@ -4525,12 +4649,8 @@ function erl_exec() {
 	   }
 	   break;
 
-	case 131: 'bs_test_unit/3'
-	  var ms = g(code[ip+1]);
-	  if ((ms.bin.length - ms.offs) % code[ip+2] == 0) break;
-	  ip = code[ip];
-	  continue;
 
+	  
 	  // Faults
 	case 74: // case_end/1 Unmatched
           c_p.fault = true;
@@ -4579,13 +4699,12 @@ function erl_exec() {
 	  throw 'Unexpected fatal, reached code end';
 
 	  /* missing ops 
-	  //new binary ops
+	  //new bitstring ops
 	case 110: 'bs_bits_to_bytes/3'
 	case 118: 'bs_get_float2/7'
 	case 126: 'bs_final2/2'
 	case 127: 'bs_bits_to_bytes2/2'
 	case 128: 'put_literal/2'
-	case 129: 'is_bitstr/2'
 	  //utf8,16,32 support
 	case 139: 'bs_skip_utf8/4'
 	case 140: 'bs_get_utf16/5'
@@ -4639,6 +4758,15 @@ function erl_exec() {
   } //new_proc
 } //run
 
+function createTimeout(timeout, p, ip) {
+  return setTimeout(function () {
+    if (procs[p]) {
+      procs[p].ip = ip;
+      run_queue.push(procs[p]);
+//      console.log("---"+p+":timeout fired after "+timeout+" ms at ip="+ip);
+    }
+  }, Number(timeout));
+}
 
 function handle_distmessage(e) {
     var str = atob(e.data);  
