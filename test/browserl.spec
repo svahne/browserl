@@ -74,13 +74,4 @@
 %{suites, all_nodes, "/tmp", re_SUITE}. % malformed js regexp
 %{suites, all_nodes, "/tmp", slave_SUITE}. %4 == all
 
-
-% 134 70
-% 182 107
-% 189 118
-% 195 112
-% 201 123
-% 210 114
-% 218 64 
-% 218 82
 % 226 102

@@ -2725,7 +2725,7 @@ function bif(c_p, m, f, a, x) {
 	    c_p.fault_class = strToAtom('exit');
 	    return x[0]; 
 	  } else if (a==2) {
-	        debugln1(c_p.name+' exit/2: '+ppx(x)+':'+c_p.stacktrace);
+//	        debugln1(c_p.name+' exit/2: '+ppx(x)+':'+c_p.stacktrace);
 	    erlangExit(c_p, x[0], x[1]);
             return am_true; 
 	  } else break;
@@ -3619,7 +3619,7 @@ function ets_select_delete(name, opts) {
 //TODO
 //e.g. opts == [{{_,_,$1,},[{==,$1,<<pid##102>>,},],[$_,],},]
 function ets_select(name, opts) {
-  debugln1('TODO ets_select:'+pp(name)+'::::'+pp(opts));
+//  debugln1('TODO ets_select:'+pp(name)+'::::'+pp(opts));
   var nameOrNumber = name; //TODO
   /*
   var head = opts[0];
@@ -3824,7 +3824,7 @@ function erl_exec() {
   var x, y, fun, ar, name, mod, ip, c_p, fr = []; 
   
   //for bitstrings
-  var bs_str, bs_size, bs_dst;
+  var bs_str, bs_size, bs_dst, bs_offs;
 
   //this function must always be used when target may be a register
   function g(arg) {
@@ -4621,6 +4621,7 @@ function erl_exec() {
          bs_str = '';
 	 bs_size = g(code[ip+1]);
 	 bs_dst = code[ip+5];
+	 bs_offs = 0;
 	 if (is_integer(bs_size)) break;
 	 ip = code[ip];
 	 continue;
@@ -4629,6 +4630,7 @@ function erl_exec() {
           bs_str = '';
 	  bs_size = g(code[ip+1])*8;
 	  bs_dst = code[ip+5];
+ 	  bs_offs = 0;
 	  if (is_integer(bs_size)) break;
 	  ip = code[ip];
 	  continue;
@@ -4637,6 +4639,7 @@ function erl_exec() {
           bs_str = g(code[ip+5]);
 	  bs_size = g(code[ip+1])*g(code[ip+4]);
 	  bs_dst = code[ip+7];
+          bs_offs = 0;
 	  if (is_integer(bs_size)) break;
 	  ip = code[ip];
 	  continue;
@@ -4645,6 +4648,7 @@ function erl_exec() {
           bs_str = g(code[ip+3]);
 	  bs_size = g(code[ip+1])*g(code[ip+2]);
 	  bs_dst = code[ip+5];
+	  bs_offs = 0;
 	  if (is_integer(bs_size)) break;
 	  ip = code[ip];
 	  continue;
@@ -4654,8 +4658,9 @@ function erl_exec() {
 	  if (bits == 64 || bits == 32) {
 	    var a = floatToArray(g(code[ip+4]).value, bits);
 	    for (var i = 0; i < a.length; i++) bs_str+= String.fromCharCode(a[i]);
-	    bs_size -= bits;
-	    if (bs_size <= 0) s(bs_dst, bs_str);
+	    bs_offs += bits;
+	    if (bs_offs == bs_size) s(bs_dst, bs_str);
+	    if (bs_offs > bs_size) throw "appending bitstring to offs > size";
 	    break;
 	  }
 	  ip = code[ip];
@@ -4664,8 +4669,9 @@ function erl_exec() {
 	case 92: // bs_put_string/2 Len Offs
 	  var bytes = g(code[ip]);
 	  bs_str += strings.substr(code[ip+1],bytes);
-	  bs_size -= bytes*8;
-	  if (bs_size <= 0) s(bs_dst, bs_str);
+	  bs_offs += bytes*8;
+	  if (bs_offs == bs_size) s(bs_dst, bs_str);
+          if (bs_offs > bs_size) throw "appending bitstring to offs > size";
 	  break;
 	  
 	case 89: // bs_put_integer/5 Fail Size Unit Flags Src=x 8 1 0 1
@@ -4678,10 +4684,9 @@ function erl_exec() {
 	    s1 = s1 >> 8;
 	  }
 	  bs_str += s2.split('').reverse().join(''); //TODO optimize me
-	  bs_size -= bytes*8;
-	  if (bs_size <= 0) { //TODO "=0"
-	    s(bs_dst, bs_str);
-	  }
+	  bs_offs += bytes*8;
+	  if (bs_size == bs_offs) s(bs_dst, bs_str);
+          if (bs_offs > bs_size) throw "appending bitstring to offs > size";
 	  break;
 	 //TODO: fail?
 		
@@ -4690,13 +4695,14 @@ function erl_exec() {
 	  var src = g(code[ip+4]);
 	  if (sz==strToAtom('all')) {
 	    bs_str += src;
-	    bs_size -= src.length*8;
+	    bs_offs += src.length*8;
 	  } else {  
 	    var bytes = div(sz*g(code[ip+2]), 8);
 	    bs_str += src.substr(0,bytes);
-	    bs_size -= bytes*8;
+	    bs_offs += bytes*8;
 	  }
-	  if (bs_size <= 0) s(bs_dst, bs_str);
+	  if (bs_offs == bs_size) s(bs_dst, bs_str);
+          if (bs_offs > bs_size) throw "appending bitstring to offs > size";
 	  break;
 	 //TODO: fail?
 	  

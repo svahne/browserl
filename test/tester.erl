@@ -54,6 +54,7 @@ handle(Req, SockjsState) ->
                   File =:= [<<"index.html">>];
                   File =:= [<<"test_main.js">>];
                   File =:= [<<"browserl.js">>];
+                  File =:= [<<"vbarray.vbscript">>];
                   File =:= [<<"hapint">>,<<"hapint.es">>];
                   File =:= [<<"sockjs">>,<<"sockjs-0.2.min.js">>];
                   File =:= [<<"zlib">>,<<"zlib.js">>];
