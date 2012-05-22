@@ -24,7 +24,6 @@
 //TODO list:
 //-----------
 //binaries, really a hack at the moment
-//floats, mostly works, but uses binaries
 //ets tables, just a hack to get things working
 //file ops, just a hack
 //checking args for bifs
@@ -68,7 +67,6 @@ var OpcodeNames = ['NOP','label/1','func_info/3','int_code_end/0','call/2','call
 var ArityTable = [0,1,3,0,2,3,2,2,3,2,4,5,2,3,2,3,2,1,1,0,0,0,0,2,1,1,2,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,1,2,1,2,3,3,3,3,3,2,1,1,0,1,1,3,2,2,2,5,5,5,4,2,1,1,2,2,5,5,5,2,1,0,1,2,2,4,4,4,4,3,1,2,1,1,1,2,6,3,5,1,2,2,3,5,7,7,7,5,3,2,2,5,6,2,2,2,2,1,3,4,0,8,6,2,6,5,4,5,4,5,4,3,3,3,3,3,0,1,1,7];
 
 var Modules = [];
-
 
 //
 // START OF LOADER CODE
@@ -412,7 +410,7 @@ function arrayToFloat(a, pos) {
   return num;
 }
 
-function floatToArray(n) {
+function floatToArray(n, bits) { //TODO: handle 32 bits
   var s = (n < 0) ? 1 : 0;
   var e = 0, m = 0;
   n = Math.abs(n);
@@ -425,7 +423,7 @@ function floatToArray(n) {
       e--;
       n *= 2;
     } 
-  } else { e = -1023; n = 1;} //TODO handle normalised numbers
+  } else { e = -1023; n = 1;} //TODO handle denormalised numbers
 //  console.log("exponent: "+(e+1023)+" mantissa: "+(n-1)*0x10000000000000); //1 bsl 52
   var lower32bits = (n-1)*4503599627370496 & 0xffffffff; //shift mantissa 52 bits and mask out lowest 32
   var higher32bits = ((n-1)*Math.pow(2,20)) & 0xfffff | (Math.abs(e+1023) << 20) | (s << 31);
@@ -444,10 +442,12 @@ function arrayToTerm(a, loading){
         var num = arrayToFloat(a, pos);
 	pos += 8; 
 	return {type:am_float, value:num}; 
-//      case 77: //bitstring (used in erl_eval_SUITE, and many more)
-//        var num = arrayToFloat(a, pos);
-//	pos += 8; 
-//	return {type:am_float, value:num}; 
+      case 77: //bitstring (used in erl_eval_SUITE, and many more)
+	var byte_len = bytesToInteger(a, pos, 4);
+	var bits_in_last_byte = bytesToInteger(a, pos+4, 1);
+	pos += 4+byte_len+1;
+        return {type:'bitstring', value: a.getString(pos-byte_len, byte_len+1), 
+                len:byte_len*8+bits_in_last_byte};
       case 97: //small int
 	return bytesToInteger(a, pos++, 1);
       case 98: //int
@@ -498,7 +498,17 @@ function arrayToTerm(a, loading){
 	var len = bytesToInteger(a, pos, 4);
 	pos += 4 + len; 
 	return a.getString(pos - len, len);
-//      case 110: //small big (used in dets_SUITE, ets_SUITE)
+      case 110: //small big
+        var len = bytesToInteger(a, pos, 1);
+        var sign = bytesToInteger(a, pos+1, 1);
+        var bytes = a.subarray(pos+2, pos+2+len);
+	pos += len+2;
+	var big = new Math.BigInt("0"), t = Math.BigInt.valueOf(256);  
+	for (var i = 0; i<len; i++) {
+	  big = big.add(t.pow(i).multiply(Math.BigInt.valueOf(bytes[i]))); 
+	} 
+	if (sign==1) return big.negate();
+	return big;
 //      case 112: //fun e.g. fun()-> ok end
 //      case 113: //fun e.g. fun io:format/2
       case 114: //external reference
@@ -614,8 +624,12 @@ function termToBinary(term){
        debugln1("WARNING: encoding fun not implemented");
     } else if (is_binary(a)) { //HACK
        debugln1("WARNING: encoding binary not implemented");
+    } else if (is_bitstring(a)) { //HACK
+       debugln1("WARNING: encoding bitstring not implemented");
     } else if (is_float(a)) { //HACK
        debugln1("WARNING: encoding float not implemented");      
+    } else if (is_binary_matchspec(a)) {
+       debugln1("WARNING: encoding matchspec_binary not implemented");      
     } else throw "unknown type in term_to_binary";
     return res;
   }
@@ -732,9 +746,10 @@ function loadFiles(files, mod, fun, args) {
       
 //    var start = Date.now();
       if (fileName.match(/\.beam$/)) checkBeam(a, tarPos+512, fileLen);
+//      if (fileName.match(/io_SUITE\.beam$/)) checkBeam(a, tarPos+512, fileLen);
       tarPos += 512 + 512 * Math.ceil(fileLen / 512);
 //    var elapsed = Date.now()-start;
-//    debugln1('loaded file'+fileName+': '+elapsed);
+//    debugln1('loaded file'+fileName+': ');
     }
   }
 
@@ -1188,9 +1203,10 @@ function bif_bsl2(c_p, s1,s2) {
   if (is_bignum(s1)) 
     if (is_bignum(s2)) return s1.shiftLeft(s2);
     else return s1.shiftLeft(Math.BigInt.valueOf(s2))
-  if (is_bignum(s2)) return s2.shiftLeft(Math.BigInt.valueOf(s1));
-  if (is_smallnum(s1) && is_smallnum(s2))
-    return s1 << s2;
+  if (is_bignum(s2)) return Math.BigInt.valueOf(s1).shiftLeft(s2);
+  if (is_smallnum(s1)) 
+    if (s2 < 32 && s1 >>> (32-s2) == 0 ) return s1 << s2;
+    else return Math.BigInt.valueOf(s1).shiftLeft(s2);
   return badarith(c_p);
 }
 
@@ -1208,7 +1224,7 @@ function bif_rem2(c_p, s1, s2) {
 
   if (s2==0) return badarith(c_p, s2);
   s1 = s1 % s2;
-  if (!(s1>0) && !(s1<=0)) throw 'NaN'
+  if (!(s1>0) && !(s1<=0)) return badarg_stacktrace(c_p, s1);
   if (is_small(s1)) return s1;
   return intToBig(s1);
 }
@@ -1223,7 +1239,7 @@ function bif_div2(c_p, s1, s2) {
 
   if (s2==0) return badarith(c_p, s2);
   s1 = div(s1, s2);
-  if (!(s1>0) && !(s1<=0)) throw 'NaN' //assert
+  if (!(s1>0) && !(s1<=0)) return badarg_stacktrace(c_p, s1);
   if (is_small(s1)) return s1;
   return intToBig(s1);
 }
@@ -1234,7 +1250,7 @@ function bif_divide2(c_p, s1, s2) {
   if (is_bignum(s1)) s1=s1.doubleValue();
   if (is_bignum(s2)) s2=s2.doubleValue();
   if (s2==0) return badarith(c_p, s2);
-  if (!(s1>0) && !(s1<=0)) throw 'NaN' //assert
+  if (!(s1>0) && !(s1<=0)) return badarg_stacktrace(c_p, s1);
   s1 = s1/s2;
   return {type:am_float, value: s1};
 }
@@ -1248,7 +1264,7 @@ function bif_multiply2(c_p, s1, s2) {
   if (is_bignum(s2)) return s2.multiply(Math.BigInt.valueOf(s1));
 
   s1 = s1*s2;
-  if (!(s1>0) && !(s1<=0)) throw 'NaN'
+  if (!(s1>0) && !(s1<=0)) return badarg_stacktrace(c_p, s1);
   if (Math.round(s1) != s1) return {type:am_float, value: s1};
   if (is_small(s1)) return s1;
   return intToBig(s1);
@@ -1618,6 +1634,9 @@ function gc_bif1(c_p, mfa, arg1) {
       if (is_bignum(arg1)) return arg1.negate();
       if (is_float(arg1)) return {type:am_float, value:-arg1.value};
       return -arg1;
+    case am_sign_plus: 
+      if (!is_number(arg1)) return badarg(c_p, arg1);
+      return arg1;
     case am_abs:
       if (!is_number(arg1)) return badarg(c_p, arg1);
       if (is_bignum(arg1)) return arg1.abs();
@@ -3065,6 +3084,7 @@ function bif(c_p, m, f, a, x) {
 	  if (!is_iolist(x[0])) return badarg_stacktrace(c_p, x[0]);
 	  return strToList(iolist_to_binary({value:x[0], next:2<<27}));
       }
+      break;
       
     case am_error_logger:
       if (a != 0) break;
@@ -3490,7 +3510,7 @@ function iolist_to_binary(list) {
     if (typeof list.value == 'string') str+=list.value;
     else if (list.value.next != undefined) str+=iolist_to_binary(list.value); 
     else if (typeof list.value == 'number') str += String.fromCharCode(list.value);
-    else if (is_bignum(list.value)) str += list.value.toString();
+    else if (is_bignum(list.value)) str += String.fromCharCode(list.value.toString());
     else  throw 'faulty iolist';
     list = list.next;
   }
@@ -3808,11 +3828,11 @@ function erl_exec() {
 
   //this function must always be used when target may be a register
   function g(arg) {
-    switch (arg >> 27) {
+    switch (arg >>> 27) {
       case 5: return r;
-      case 3: return x[arg<<5>>5];
-      case 4: return y[y.length-1-(arg<<5>>5)];
-      case 6: return mod.literals[arg<<5>>5]
+      case 3: return x[arg<<5>>>5];
+      case 4: return y[y.length-1-(arg<<5>>>5)];
+      case 6: return mod.literals[arg<<5>>>5]
       default: return arg;
     }
   }
@@ -3867,7 +3887,7 @@ function erl_exec() {
 	debugln1('*** WARNING: undefined module: '+pp(orig_mod))
       } else {
 
-/*
+///*
 	if (debug || name == debug_pid){
 	  debugln1("");
 	  x[0]=r; debugln1(name+':ExtCall to ' + mod.name + ':'+ 
@@ -3970,7 +3990,7 @@ function erl_exec() {
 	  code = mod.code;
 	  imports = mod.imports;
 	  strings = mod.string;
-//	  if (debug || name == debug_pid ) debugln1('return to '+ipToFunction(mod, ip)+' r='+pp(r));
+	  if (debug || name == debug_pid ) debugln1('return to '+ipToFunction(mod, ip)+' r='+pp(r));
 	  continue;
 
 	case 65: // get_list/3  Src  Head  Tail
@@ -3991,7 +4011,7 @@ function erl_exec() {
 	case 6:   // call_only/2 (Ar) Func 
 	  ip = code[ip + 1];
 	  reds--;
-/*	  
+///*	  
           if(debug || name == debug_pid) {
 	    debugln1('');
 	    debugln1(name+':call '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
@@ -4029,7 +4049,7 @@ function erl_exec() {
 	  y.length -= code[ip + 2];
 	  ip = code[ip + 1];
 	  reds--;
-/*	  
+///*	  
 	  if (debug || name == debug_pid) {
 	    debugln1(''); 
 	    debugln1(name+':call last '+mod.name+'@'+ip+' ('+pp(code[ip-3])+
@@ -4466,6 +4486,8 @@ function erl_exec() {
 	  // Binaries and Bitstrings
 	  // A binary always contains a "complete number of bytes" [as per the documentation]
 	  // Binaries are a subset of bitstrings
+	  // Binaries are represented as js strings 
+	  // bitstrings as {value:'js String', len:'bit length'}
 	   
 	case 116: // bs_start_match2/5 Fail Src Live Max/Slots Ms
           s1 = g(code[ip+1]);
@@ -4473,8 +4495,10 @@ function erl_exec() {
 	    s(code[ip+4], {type:'matchspec_binary', bin: s1, offs: 0, len: s1.length*8 });
 	    break;
 	  } else if (is_bitstring(s1)) {
-	    s(code[ip+4], {type:'matchspec_bitstring', bin: s1, offs: 0, len: s1.length*8 }); //TODO
+	    s(code[ip+4], {type:'matchspec_bitstring', bin: s1.value, offs: 0, len: s1.len });
+	    break;
 	  }
+	  //Fail when not a binary of bitstring
 	  ip = code[ip];
           continue;
 
@@ -4485,31 +4509,6 @@ function erl_exec() {
 	  ip=code[ip]; 
 	  continue;
 
-	case 132: // bs_match_string/4 Fail Ms=x Bits Offs
-	  var bytes = div(g(code[ip+2])+1,8); //TODO Why +1?
-	  var ms = g(code[ip+1]);
-	  if (is_binary_matchspec(ms)) {
-	    s1 = strings.substr(code[ip+3],bytes);
-	    s2 = ms.bin.substr(div(ms.offs,8), bytes);
-	    g(code[ip+1]).offs += bytes*8;
-	    if (s1==s2) break;
-	    ip = code[ip];
-	    continue;
-	  } else if (is_bitstring_matchspec(ms)) {
-	    // I do not think this should work for bitstrings...
-	    throw "Not implemented for bitstrings!";
-	  }
-
-        case 138: //bs_get_utf8/5 //HACK
-          var ms = g(code[ip+1]);
-	  if (ms.offs <= ms.len) {
-	    s(code[ip+4], ms.bin[div(ms.offs,8)]);
-	    g(code[ip+1]).offs += 8;
-	    break;
-	  }
-	  ip = code[ip];
-	  continue;
-
 	case 120: //bs_skip_bits2/5 Fail Ms Size|all Unit Flags
           var ms = g(code[ip+1]);
           var sz = g(code[ip+2]);
@@ -4518,69 +4517,155 @@ function erl_exec() {
 	  else if (ms.offs + sz*u > ms.len) {
 	    ip = code[ip];
 	    continue;
-	  }
-	  ms.offs += sz*u;
+	  } else ms.offs += sz*u;
 	  break;
-	
-	  //TODO: bs_get_integer2/7 requires some careful thinking...
-	case 117: // bs_get_integer2/7 Fail Ms=x Live Size Unit Flags Dst=x
-         var bits = g(code[ip+3])*g(code[ip+4])	 
-	 var bytes = div(bits,8);
-         var ms = g(code[ip+1]);
-	 var str = ms.bin.substr(div(ms.offs,8), bytes);
-	 if (str.length != bytes) {
-	   ip=code[ip]; 
-	   continue;
-	 }
-	 var value = 0; //TODO will not handle very large bigints
-	 for (j = 0; j < bytes; j++) value = 256*value+str.charCodeAt(j);
-	 ms.offs += bits;
-	 if (is_big(value)) value = Math.BigInt.valueOf(value);
-	 s(code[ip+6], value);
-	 break;
 
-	case 119: // bs_get_binary2/7 Fail Ms=x Live Size Unit Flags Dst=x
-         var ms = g(code[ip+1]);
-         if (is_bitstring_matchspec(ms)) {
-	    // I do not think this should work for bitstrings...
-	    throw "Not implemented for bitstrings!";
-	 }
-	 ms.offs = ms.len; //TODO until end of string for now
-	 s(code[ip+6], ms.bin.substr(div(ms.offs,8))); 
-         break;
-	 //TODO fail case: offs + size*unit > len
-
-	case 131: 'bs_test_unit/3'
+	case 131: //'bs_test_unit/3' Fail Ms Unit
 	  var ms = g(code[ip+1]);
 	  if ((ms.len - ms.offs) % code[ip+2] == 0) break;
 	  ip = code[ip];
 	  continue;
-	 
+	  
+	case 117: // bs_get_integer2/7 Fail Ms=x Live Size Unit Flags Dst=x
+         var sz = g(code[ip+3]);
+	 var u = g(code[ip+4]);
+         var bits = sz*u;
+         var ms = g(code[ip+1]);
+	 if (sz==strToAtom('all')) throw "bitstring match not yet implemented (3)"
+	 if (ms.offs + bits > ms.len) {
+	   ip=code[ip]; 
+	   continue;
+	 } 
+	 var value = 0;
+	 while (bits > 0) {
+	   var byte = div(ms.offs,8);
+	   var boffs = ms.offs % 8;
+	   var bsize = bits > 8 ? 8 - boffs : bits;
+	   value += (ms.bin.charCodeAt(byte) << boffs >>> 8 - bsize)*Math.pow(2, bits-bsize); 
+	   bits -= bsize;
+	   ms.offs += bsize;
+	}
+	if (is_big(value)) value = Math.BigInt.valueOf(value); //TODO: too late to check here
+	s(code[ip+6], value);
+	break;
+
+	case 119: // bs_get_binary2/7 Fail Ms=x Live Size|all Unit Flags Dst=x
+         var sz = g(code[ip+3]);
+	 var u = g(code[ip+4]);
+         var bits = sz*u;	 
+         var ms = g(code[ip+1]);
+	 if (sz==strToAtom('all')) {
+	   bits = ms.len - ms.offs;
+	   ms.offs = ms.len;
+	 } else if (ms.offs + bits > ms.len) {
+	   ip = code[ip]; 
+	   continue;
+	 } else ms.offs += bits;
+	 //TODO: ms.offs might not be evenly divisible by 8!
+	 //TODO: bits might not be evenly divisible by 8!
+	 if (bits % 8 != 0) throw "bitstring match not yet implemented (4):" + bits;
+	 if ((ms.offs-bits) % 8 != 0) throw "bitstring match not yet implemented (5):" + ms.offs;
+	 s(code[ip+6], ms.bin.substr(div(ms.offs-bits,8), div(bits,8))); 
+         break;
+
+	case 132: // bs_match_string/4 Fail Ms=x Bits Offs
+	  var bits = g(code[ip+2]);
+	  var bytes = div(bits, 8);
+	  var ms = g(code[ip+1]);
+	  //TODO: ms.offs may not be evenly divisible by 8!
+	  //TODO: bits may not be evenly divisible by 8!
+	  if (bits != bytes*8) throw "bitstring match not yet implemented (1)";
+	  if (ms.offs % 8 != 0) throw "bitstring match not yet implemented (2)";
+	  if (bits + ms.offs <= ms.len) {
+	    s1 = strings.substr(code[ip+3], bytes);
+	    s2 = ms.bin.substr(div(ms.offs,8), bytes);
+	    ms.offs += bits;
+	    if (s1 == s2) break;
+	  }
+	  ip = code[ip];
+	  continue;
+
+        case 138: //bs_get_utf8/5 //HACK
+          var ms = g(code[ip+1]);
+	  if (ms.offs + 8 <= ms.len) {
+	    s(code[ip+4], ms.bin[div(ms.offs,8)]);
+	    ms.offs += 8;
+	    break;
+	  }
+	  ip = code[ip];
+	  continue;
+
+	case 139: //'bs_skip_utf8/4' Fail Ms Size|all Unit Flags
+          var ms = g(code[ip+1]);
+	  if (ms.offs + 8 <= ms.len) {
+	    ms.offs += 8;
+	    break;
+	  }
+	  ip = code[ip];
+	  continue;
+	  
 	 //Creating binaries and bitstrings
 
 	case 111: // bs_add/5 Fail S1=#units S2='extra bits'? Unit Dst
          s1 = g(code[ip+1]);	   
          s2 = g(code[ip+2]);
          var unit = g(code[ip+3]);
-	 s(code[ip+4], s1*unit+s2);
-	 break;
+	 if (is_integer(s1) && is_integer(s2) && is_integer(unit) && s1*unit+s2 < (2 << 27)) {
+	   s(code[ip+4], s1*unit+s2);
+	   break;
+	 }
+	 ip = code[ip];
+	 continue;
 
 	case 137: //bs_init_bits/6 Fail Sz=#bits Words Regs Flags Dst=x
          bs_str = '';
 	 bs_size = g(code[ip+1]);
 	 bs_dst = code[ip+5];
-	 break;
+	 if (is_integer(bs_size)) break;
+	 ip = code[ip];
+	 continue;
 
 	case 109: // bs_init2/6 Fail Sz Words Regs Flags Dst=x
           bs_str = '';
 	  bs_size = g(code[ip+1])*8;
 	  bs_dst = code[ip+5];
-	  break;
+	  if (is_integer(bs_size)) break;
+	  ip = code[ip];
+	  continue;
 
 	case 134: //'bs_append/8'  Fail Size Extra Live Unit Bin Flags Dst
           bs_str = g(code[ip+5]);
 	  bs_size = g(code[ip+1])*g(code[ip+4]);
 	  bs_dst = code[ip+7];
+	  if (is_integer(bs_size)) break;
+	  ip = code[ip];
+	  continue;
+
+	case 135: //'bs_private_append/6' Fail Size Unit Bin Flags Dst
+          bs_str = g(code[ip+3]);
+	  bs_size = g(code[ip+1])*g(code[ip+2]);
+	  bs_dst = code[ip+5];
+	  if (is_integer(bs_size)) break;
+	  ip = code[ip];
+	  continue;
+
+	case 91: // bs_put_float/5 Fail Sz Unit Flags Src
+	  var bits = g(code[ip+1])*g(code[ip+2]); 
+	  if (bits == 64 || bits == 32) {
+	    var a = floatToArray(g(code[ip+4]).value, bits);
+	    for (var i = 0; i < a.length; i++) bs_str+= String.fromCharCode(a[i]);
+	    bs_size -= bits;
+	    if (bs_size <= 0) s(bs_dst, bs_str);
+	    break;
+	  }
+	  ip = code[ip];
+	  continue;
+	  
+	case 92: // bs_put_string/2 Len Offs
+	  var bytes = g(code[ip]);
+	  bs_str += strings.substr(code[ip+1],bytes);
+	  bs_size -= bytes*8;
+	  if (bs_size <= 0) s(bs_dst, bs_str);
 	  break;
 	  
 	case 89: // bs_put_integer/5 Fail Size Unit Flags Src=x 8 1 0 1
@@ -4594,25 +4679,11 @@ function erl_exec() {
 	  }
 	  bs_str += s2.split('').reverse().join(''); //TODO optimize me
 	  bs_size -= bytes*8;
-	  if (bs_size <= 0) {
+	  if (bs_size <= 0) { //TODO "=0"
 	    s(bs_dst, bs_str);
 	  }
 	  break;
-
-	case 92: // bs_put_string/2 Len Offs
-	  var bytes = g(code[ip]);
-	  bs_str += strings.substr(code[ip+1],bytes);
-	  bs_size -= bytes*8;
-	  if (bs_size <= 0) s(bs_dst, bs_str);
-	  break;
-
-	case 91: // bs_put_float/5 Fail Sz Unit Flags Src
-	  var bits = g(code[ip+1])*g(code[ip+2]);
-	  var a = floatToArray(g(code[ip+4]).value);
-	  for (var i = 0; i < a.length; i++) bs_str+= String.fromCharCode(a[i]);
-	  bs_size -= bits;
-	  if (bs_size <= 0) s(bs_dst, bs_str);
-	  break;
+	 //TODO: fail?
 		
 	case 90: //bs_put_binary/5 Fail Size|all Unit Flags Src
           var sz = g(code[ip+1]);
@@ -4627,11 +4698,8 @@ function erl_exec() {
 	  }
 	  if (bs_size <= 0) s(bs_dst, bs_str);
 	  break;
+	 //TODO: fail?
 	  
-	  //use e.g. base64_SUITE to test these
-//	case 133: //'bs_init_writable/0'
-//	case 135: //'bs_private_append/6'
-
 	case 123: // bs_restore2/2 Offs Reg //TODO
           g(code[ip]).offs = g(code[ip]).saved_offs
           break;
@@ -4649,7 +4717,26 @@ function erl_exec() {
 	   }
 	   break;
 
-
+	case 133: //'bs_init_writable/0' //TODO
+           break;
+	   
+	case 110: //'bs_bits_to_bytes/3'
+	case 118: //'bs_get_float2/7'
+	case 126: //'bs_final2/2'
+	case 127: //'bs_bits_to_bytes2/2'
+	case 128: //'put_literal/2'
+	  //utf8,16,32 support
+	case 140: //'bs_get_utf16/5'
+	case 141: //'bs_skip_utf16/4'
+	case 142: //'bs_get_utf32/5'
+	case 143: //'bs_skip_utf32/4'
+	case 144: //'bs_utf8_size/3'
+	case 145: //'bs_put_utf8/3'
+	case 146: //'bs_utf16_size/3'
+	case 147: //'bs_put_utf16/3'
+	case 148: //'bs_put_utf32/3'
+          throw "Unimplemented bitstring opcode:"+(op)+':'+OpcodeNames[op];
+	  
 	  
 	  // Faults
 	case 74: // case_end/1 Unmatched
@@ -4699,24 +4786,6 @@ function erl_exec() {
 	  throw 'Unexpected fatal, reached code end';
 
 	  /* missing ops 
-	  //new bitstring ops
-	case 110: 'bs_bits_to_bytes/3'
-	case 118: 'bs_get_float2/7'
-	case 126: 'bs_final2/2'
-	case 127: 'bs_bits_to_bytes2/2'
-	case 128: 'put_literal/2'
-	  //utf8,16,32 support
-	case 139: 'bs_skip_utf8/4'
-	case 140: 'bs_get_utf16/5'
-	case 141: 'bs_skip_utf16/4'
-	case 142: 'bs_get_utf32/5'
-	case 143: 'bs_skip_utf32/4'
-	case 144: 'bs_utf8_size/3'
-	case 145: 'bs_put_utf8/3'
-	case 146: 'bs_utf16_size/3'
-	case 147: 'bs_put_utf16/3'
-	case 148: 'bs_put_utf32/3'
-
 	  //The following do not exist in stdlib or kernel
 	case 54: 'is_constant/2'
 	case 68: 'put_string/3'
